@@ -1,0 +1,39 @@
+# Gin-Config:
+# Parameters for GenericConvnet:
+# ==============================================================================
+GenericConvnet.bn_is_affine = True
+GenericConvnet.dropout_rate = 0.5
+GenericConvnet.use_batchnorm = False
+GenericConvnet.use_dropout = False
+GenericConvnet.use_masked_layers = False
+GenericConvnet.use_mean_replacer = False
+GenericConvnet.use_taylor_scorer = False
+
+# Parameters for get_datasets:
+# ==============================================================================
+get_datasets.batch_size = 32
+get_datasets.chunk_size = 32
+get_datasets.data_dir = None
+get_datasets.num_parallel_calls = None
+get_datasets.prefetch_n = None
+get_datasets.shuffle_size = 5000
+get_datasets.eval_size = 2000
+get_datasets.val_size = 2000
+
+# Parameters for get_model:
+# ==============================================================================
+get_model.model_arch_name = 'vgg_16'
+# Parameters for train_model:
+# ==============================================================================
+# 5994 training images 5794 test.
+train_model.checkpoint_every_n_epoch = 10
+train_model.dataset_name = 'cub200'
+train_model.epochs = 60
+train_model.log_interval = 250
+train_model.lr = 1e-3
+# 188 iteration per epoch when batch_size = 32, so learning rate drop starts
+# epoch=30.
+train_model.lr_drop_iter = 5640
+train_model.lr_decay = 0.1
+train_model.momentum = 0.9
+train_model.seed = 8

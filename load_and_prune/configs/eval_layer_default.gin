@@ -1,0 +1,19 @@
+prune_layer_and_eval.dataset_name='cifar10'
+prune_layer_and_eval.l_name = 'conv_6'
+prune_layer_and_eval.n_exps = 20
+prune_layer_and_eval.val_size = 1000
+prune_layer_and_eval.max_pruning_fraction = 0.95
+prune_layer_and_eval.pruning_methods = (('rand', True),
+                                        ('rand', False),
+                                        ('abs_rs', False),
+                                        ('abs_rs', True),
+                                        ('norm', False),
+                                        ('norm', True),
+                                        ('abs_mrs', True),
+                                        ('abs_mrs', False))
+# ====================get_model===================
+get_model.model_arch_name = 'vgg_16'
+get_model.prepare_for_pruning = True
+# ====================get_datasets===================
+get_datasets.eval_size = 10000
+get_datasets.chunk_size = 200

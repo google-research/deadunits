@@ -1,0 +1,35 @@
+# ====================prune_and_finetune_model===================
+# Taken from Pruning Filters for Efficient ConvNets
+# https://arxiv.org/abs/1608.08710
+# Accuracy is as low as 20% right after pruning. However it recover's its
+# performance in around 500 iterations.
+prune_and_finetune_model.pruning_schedule = [('conv_1', 0.5),
+                                             ('conv_2', 0.5),
+                                             ('conv_8', 0.5),
+                                             ('conv_9', 0.75),
+                                             ('conv_10', 0.75),
+                                             ('conv_11', 0.75),
+                                             ('conv_12', 0.75),
+                                             ('conv_13', 0.75),
+                                             ('dense_1', 0.5),
+                                             ]
+prune_and_finetune_model.dataset_name = 'cifar10'
+prune_and_finetune_model.log_interval = 250
+prune_and_finetune_model.n_finetune = 1
+prune_and_finetune_model.epochs = 20
+prune_and_finetune_model.lr = 1e-3
+prune_and_finetune_model.momentum = 0.9
+prune_and_finetune_model.checkpoint_interval = 1
+
+# ====================get_model===================
+get_model.model_arch_name = 'vgg_16'
+get_model.prepare_for_pruning = True
+# ====================UnitPruner===================
+UnitPruner.pruning_method = 'norm'
+UnitPruner.is_bp = False
+# ====================get_datasets===================
+get_datasets.val_size = 1000
+get_datasets.batch_size = 64
+get_datasets.eval_size = 1000
+get_datasets.chunk_size = 200
+get_datasets.prefetch_n = None #autotune

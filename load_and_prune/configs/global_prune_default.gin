@@ -1,0 +1,26 @@
+# ====================prune_and_finetune_model===================
+prune_and_finetune_model.log_interval = 10
+prune_and_finetune_model.seed = 8
+prune_and_finetune_model.n_finetune = 1
+prune_and_finetune_model.n_units_target=4000
+prune_and_finetune_model.checkpoint_interval=100
+prune_and_finetune_model.flop_regularizer=0
+# ====================UnitPruner===================
+UnitPruner.pruning_method='norm'
+UnitPruner.is_bp=True
+# ====================get_datasets===================
+get_datasets.val_size = 5000
+get_datasets.batch_size = 32
+get_datasets.eval_size = 5000
+get_datasets.chunk_size = 32
+get_datasets.prefetch_n = None #autotune
+
+# Gin-Config:
+# Parameters for GenericConvnet:
+# ==============================================================================
+GenericConvnet.use_masked_layers = True
+GenericConvnet.use_taylor_scorer = True
+
+# Parameters for get_model:
+# ==============================================================================
+get_model.model_arch_name = 'vgg_16'
