@@ -36,7 +36,6 @@ from deadunits import utils
 from deadunits.train_utils import cross_entropy_loss
 import gin
 import tensorflow as tf
-import tensorflow.contrib.eager as tfe
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',
@@ -105,13 +104,15 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
                in zip(pruning_pool, _vgg16_flop_regularizition)}
 
   step_counter = tf.train.get_or_create_global_step()
-  c_pruning_step = tfe.Variable(1)
+  c_pruning_step = contrib_eager.Variable(1)
   # Create checkpoint object TODO check whether you need ckpt-prefix.
-  checkpoint = tfe.Checkpoint(
-      optimizer=optimizer, model=model, step_counter=step_counter,
+  checkpoint = contrib_eager.Checkpoint(
+      optimizer=optimizer,
+      model=model,
+      step_counter=step_counter,
       c_pruning_step=c_pruning_step)
   # No limits basically by setting to `n_units_target`.
-  checkpoint_manager = tf.contrib.checkpoint.CheckpointManager(
+  checkpoint_manager = contrib_checkpoint.CheckpointManager(
       checkpoint, directory=FLAGS.outdir, max_to_keep=None)
 
   latest_cpkt = checkpoint_manager.latest_checkpoint
@@ -122,7 +123,7 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
     tf.logging.info('Resuming with pruning step: %d', c_pruning_step.numpy())
   pruning_step = c_pruning_step.numpy()
   while pruning_step <= n_units_target:
-    with tf.contrib.summary.record_summaries_every_n_global_steps(
+    with contrib_summary.record_summaries_every_n_global_steps(
         log_interval, global_step=step_counter):
       for (x, y) in dataset_train:
         # Every `n_finetune` step perform pruning.
@@ -145,15 +146,15 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
           c_pruning_step.assign(pruning_step)
           if tf.equal((pruning_step - 1) % checkpoint_interval, 0):
             checkpoint_manager.save()
-        if tf.contrib.summary.should_record_summaries():
+        if contrib_summary.should_record_summaries():
           train_utils.log_loss_acc(model, subset_val2, subset_test)
           train_utils.log_sparsity(model)
         with tf.GradientTape() as tape:
-          tf.contrib.summary.image('x', x, max_images=1)
+          contrib_summary.image('x', x, max_images=1)
           loss_train, _, _ = cross_entropy_loss(model, (x, y), training=True)
         grads = tape.gradient(loss_train, model.variables)
         # Updating the model.
-        tf.contrib.summary.scalar('loss_train', loss_train)
+        contrib_summary.scalar('loss_train', loss_train)
         optimizer.apply_gradients(zip(grads, model.variables),
                                   global_step=step_counter)
 
@@ -172,7 +173,7 @@ def main(_):
     tf.gfile.MakeDirs(FLAGS.outdir)
     tf.logging.info('The folder:%s has been generated', FLAGS.outdir)
   tb_path = os.path.join(FLAGS.outdir, 'tb')
-  summary_writer = tf.contrib.summary.create_file_writer(
+  summary_writer = contrib_summary.create_file_writer(
       tb_path, flush_millis=1000)
   with summary_writer.as_default():
     prune_and_finetune_model()

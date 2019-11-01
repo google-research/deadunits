@@ -35,6 +35,8 @@ from deadunits import layers
 import gin
 from six.moves import zip
 import tensorflow as tf
+from tensorflow.contrib import metrics as contrib_metrics
+from tensorflow.contrib import summary as contrib_summary
 
 
 def cross_entropy_loss(model,
@@ -93,7 +95,7 @@ def cross_entropy_loss(model,
     if calculate_accuracy:
       # Calculate accuracy.
       predictions = tf.cast(tf.argmax(logits, 1), y.dtype)
-      acc = tf.contrib.metrics.accuracy(tf.squeeze(y), predictions)
+      acc = contrib_metrics.accuracy(tf.squeeze(y), predictions)
     else:
       acc = None
     return loss, acc
@@ -260,14 +262,14 @@ def log_loss_acc(model, subset_val, subset_test):
   """
   test_loss, test_acc, n_samples = cross_entropy_loss(
       model, subset_test, calculate_accuracy=True)
-  tf.contrib.summary.scalar('test_loss', test_loss)
-  tf.contrib.summary.scalar('test_acc', test_acc)
+  contrib_summary.scalar('test_loss', test_loss)
+  contrib_summary.scalar('test_acc', test_acc)
   tf.logging.info('test_loss:%.4f, test_acc:%.4f, '
                   'n_samples:%d', test_loss, test_acc, n_samples)
   val_loss, val_acc, n_samples = cross_entropy_loss(
       model, subset_val, calculate_accuracy=True)
-  tf.contrib.summary.scalar('val_loss', val_loss)
-  tf.contrib.summary.scalar('val_acc', val_acc)
+  contrib_summary.scalar('val_loss', val_loss)
+  contrib_summary.scalar('val_acc', val_acc)
   tf.logging.info('val_loss:%.4f, val_acc:%.4f, '
                   'n_samples:%d', val_loss, val_acc, n_samples)
   return val_loss, val_acc, test_loss, test_acc
@@ -289,5 +291,5 @@ def log_sparsity(model):
       else:
         b_mask = l.mask_bias
       img = tf.expand_dims(tf.expand_dims(tf.expand_dims(b_mask, 0), 0), -1)
-      tf.contrib.summary.image(l_name + '_mask_bias', img)
-      tf.contrib.summary.scalar(l_name + '_sparsity', l.get_sparsity())
+      contrib_summary.image(l_name + '_mask_bias', img)
+      contrib_summary.scalar(l_name + '_sparsity', l.get_sparsity())

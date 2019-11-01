@@ -47,6 +47,7 @@ from deadunits import utils
 import gin
 import six
 import tensorflow as tf
+from tensorflow.contrib import summary as contrib_summary
 
 ALL_SCORING_FUNCTIONS = ['norm', 'abs_mrs', 'abs_rs', 'mrs', 'rs', 'rand']
 
@@ -366,14 +367,13 @@ def probe_pruning(model,
     # units.
     loss_new, _, _ = train_utils.cross_entropy_loss(copied_model, subset_val,
                                                     training=True)
-    tf.contrib.summary.scalar(scalar_summary_tag, loss_new - loss_val)
+    contrib_summary.scalar(scalar_summary_tag, loss_new - loss_val)
     # Setting training=True, otherwise BatchNorm uses the accumulated mean and
     # std during forward propagation, which causes pruned units to generate
     # non-zero constants.
     loss_new, _, _ = train_utils.cross_entropy_loss(
         copied_model, subset_test, training=True)
-    tf.contrib.summary.scalar(scalar_summary_tag + '_test',
-                              loss_new - loss_test)
+    contrib_summary.scalar(scalar_summary_tag + '_test', loss_new - loss_test)
   return selected_units, mean_values, l2_norms
 
 

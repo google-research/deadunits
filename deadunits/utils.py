@@ -27,7 +27,8 @@ import math
 import gin
 from six.moves import cPickle as pickle
 import tensorflow as tf
-tfe = tf.contrib.eager
+from tensorflow.contrib.eager.python import tfe as contrib_eager
+tfe = contrib_eager
 
 
 def create_binary_mask_from_scores(score_tensor, f=None, n_zeros=None):

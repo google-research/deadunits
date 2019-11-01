@@ -25,9 +25,9 @@ from deadunits import model_defs
 import gin
 from six.moves import zip
 import tensorflow as tf
+from tensorflow.contrib.eager.python import tfe as contrib_eager
 
-
-tfe = tf.contrib.eager
+tfe = contrib_eager
 INPUT_SHAPES = {'cub200': (2, 224, 224, 3),
                 'cifar10': (2, 32, 32, 3),
                 'imagenet': (2, 224, 224, 3)}

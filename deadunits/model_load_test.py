@@ -28,7 +28,8 @@ from deadunits import layers
 from deadunits import model_defs
 from deadunits import model_load
 import tensorflow as tf
-tfe = tf.contrib.eager
+from tensorflow.contrib.eager.python import tfe as contrib_eager
+tfe = contrib_eager
 tf.enable_eager_execution()
 
 

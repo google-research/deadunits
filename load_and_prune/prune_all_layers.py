@@ -35,7 +35,6 @@ from deadunits import utils
 from deadunits.train_utils import cross_entropy_loss
 import gin
 import tensorflow as tf
-import tensorflow.contrib.eager as tfe
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',
@@ -98,10 +97,12 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
   unit_pruner = pruner.UnitPruner(model, subset_val)
   step_counter = tf.train.get_or_create_global_step()
 
-  current_epoch = tfe.Variable(1)
-  current_layer_index = tfe.Variable(0)
-  checkpoint = tfe.Checkpoint(
-      optimizer=optimizer, model=model, step_counter=step_counter,
+  current_epoch = contrib_eager.Variable(1)
+  current_layer_index = contrib_eager.Variable(0)
+  checkpoint = contrib_eager.Checkpoint(
+      optimizer=optimizer,
+      model=model,
+      step_counter=step_counter,
       current_epoch=current_epoch,
       current_layer_index=current_layer_index)
   latest_cpkt = tf.train.latest_checkpoint(FLAGS.outdir)
@@ -114,7 +115,7 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
   c_layer_index = current_layer_index.numpy()
   # Starting from the first batch, we perform pruning every `n_finetune` step.
   # Layers pruned one by one according to the pruning schedule given.
-  with tf.contrib.summary.record_summaries_every_n_global_steps(
+  with contrib_summary.record_summaries_every_n_global_steps(
       log_interval, global_step=step_counter):
     while c_epoch <= epochs:
       tf.logging.info('Starting Epoch: %d', c_epoch)
@@ -125,25 +126,25 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
           tf.logging.info('Pruning at iteration: %d', step_counter.numpy())
           l_name, pruning_factor = pruning_schedule[c_layer_index]
           unit_pruner.prune_layer(l_name, pruning_factor=pruning_factor)
-          with tf.contrib.summary.always_record_summaries():
+          with contrib_summary.always_record_summaries():
             train_utils.log_loss_acc(model, subset_val2, subset_test)
             train_utils.log_sparsity(model)
           # Re-init optimizer and therefore remove previous momentum.
           optimizer = tf.train.MomentumOptimizer(lr, momentum)
           c_layer_index += 1
           current_layer_index.assign(c_layer_index)
-        elif tf.contrib.summary.should_record_summaries():
+        elif contrib_summary.should_record_summaries():
           tf.logging.info('Iteration: %d', step_counter.numpy())
           train_utils.log_loss_acc(model, subset_val2, subset_test)
           train_utils.log_sparsity(model)
         with tf.GradientTape() as tape:
-          tf.contrib.summary.image('x', x, max_images=1)
+          contrib_summary.image('x', x, max_images=1)
           loss_train, _, _ = cross_entropy_loss(model, (x, y), training=True)
         grads = tape.gradient(loss_train, model.variables)
         # Updating the model.
         optimizer.apply_gradients(zip(grads, model.variables),
                                   global_step=step_counter)
-        tf.contrib.summary.scalar('loss_train', loss_train)
+        contrib_summary.scalar('loss_train', loss_train)
       # End of an epoch.
       c_epoch += 1
       current_epoch.assign(c_epoch)
@@ -152,19 +153,21 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
           or c_epoch > epochs):
         # Re-init checkpoint to ensure the masks are captured. The reason for
         # this is that the masks are initially not generated.
-        checkpoint = tfe.Checkpoint(
-            optimizer=optimizer, model=model, step_counter=step_counter,
+        checkpoint = contrib_eager.Checkpoint(
+            optimizer=optimizer,
+            model=model,
+            step_counter=step_counter,
             current_epoch=current_epoch,
             current_layer_index=current_layer_index)
         tf.logging.info('Checkpoint after epoch: %d', c_epoch-1)
         checkpoint.save(os.path.join(FLAGS.outdir, 'ckpt-%d' % (c_epoch-1)))
 
   # Test model
-  with tf.contrib.summary.always_record_summaries():
+  with contrib_summary.always_record_summaries():
     test_loss, test_acc, n_samples = cross_entropy_loss(
         model, dataset_test, calculate_accuracy=True)
-    tf.contrib.summary.scalar('test_loss_all', test_loss)
-    tf.contrib.summary.scalar('test_acc_all', test_acc)
+    contrib_summary.scalar('test_loss_all', test_loss)
+    contrib_summary.scalar('test_acc_all', test_acc)
   tf.logging.info('Overall_test_loss: %.4f, Overall_test_acc: %.4f, '
                   'n_samples: %d', test_loss, test_acc, n_samples)
 
@@ -183,7 +186,7 @@ def main(_):
     tf.gfile.MakeDirs(FLAGS.outdir)
     tf.logging.info('The folder:%s has been generated', FLAGS.outdir)
   tb_path = os.path.join(FLAGS.outdir, 'tb')
-  summary_writer = tf.contrib.summary.create_file_writer(
+  summary_writer = contrib_summary.create_file_writer(
       tb_path, flush_millis=1000)
   with summary_writer.as_default():
     prune_and_finetune_model()
