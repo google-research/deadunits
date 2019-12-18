@@ -23,7 +23,7 @@ from __future__ import print_function
 
 from deadunits import unitscorers
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib.eager.python import tfe as contrib_eager
 tfe = contrib_eager
 tf.enable_eager_execution()

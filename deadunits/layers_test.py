@@ -24,7 +24,7 @@ from absl.testing import parameterized
 from deadunits import layers
 from six.moves import range
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 tf.enable_eager_execution()

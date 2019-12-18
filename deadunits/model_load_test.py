@@ -27,7 +27,7 @@ from absl.testing import parameterized
 from deadunits import layers
 from deadunits import model_defs
 from deadunits import model_load
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib.eager.python import tfe as contrib_eager
 tfe = contrib_eager
 tf.enable_eager_execution()

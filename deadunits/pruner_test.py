@@ -25,7 +25,7 @@ from deadunits import train_utils
 from deadunits.generic_convnet import GenericConvnet
 import mock
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 class ProbePruningTest(tf.test.TestCase):

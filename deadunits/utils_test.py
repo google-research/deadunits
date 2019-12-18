@@ -22,7 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 from deadunits import utils
 import mock
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 tf.enable_eager_execution()
 
 

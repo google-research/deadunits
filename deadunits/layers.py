@@ -24,7 +24,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from six.moves import range
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib.eager.python import tfe as contrib_eager
 
 tfe = contrib_eager

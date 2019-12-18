@@ -26,8 +26,8 @@ import os
 import gin
 from tensor2tensor import problems
 from tensor2tensor.data_generators.imagenet import imagenet_preprocess_example
-import tensorflow as tf
-from tensorflow.estimator import ModeKeys
+import tensorflow.compat.v1 as tf
+from tensorflow.compat.v1.estimator import ModeKeys
 
 _t2t_problem_names = {
     'cifar10': 'image_cifar10',

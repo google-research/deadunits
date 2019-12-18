@@ -31,7 +31,7 @@ from deadunits.layers import MeanReplacer
 from deadunits.layers import TaylorScorer
 import gin
 from six.moves import range
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 _default_generic_convnet_arch = [['C', 16, 5, {}], ['MP', 2, 2],
                                  ['C', 32, 5, {}], ['MP', 2, 2], ['F'],

@@ -32,7 +32,7 @@ from deadunits import train_utils
 from deadunits import utils
 import gin
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',

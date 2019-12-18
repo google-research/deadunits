@@ -34,7 +34,7 @@ import collections
 from deadunits import layers
 import gin
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib import metrics as contrib_metrics
 from tensorflow.contrib import summary as contrib_summary
 

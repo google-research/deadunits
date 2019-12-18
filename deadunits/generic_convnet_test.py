@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from deadunits import generic_convnet
 from deadunits import layers
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 class GenericConvnetTest(tf.test.TestCase):

@@ -26,7 +26,7 @@ from __future__ import print_function
 import math
 import gin
 from six.moves import cPickle as pickle
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib.eager.python import tfe as contrib_eager
 tfe = contrib_eager
 

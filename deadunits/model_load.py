@@ -24,7 +24,7 @@ from deadunits import generic_convnet
 from deadunits import model_defs
 import gin
 from six.moves import zip
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib.eager.python import tfe as contrib_eager
 
 tfe = contrib_eager

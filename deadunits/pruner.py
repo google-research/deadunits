@@ -46,7 +46,7 @@ from deadunits import unitscorers
 from deadunits import utils
 import gin
 import six
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from tensorflow.contrib import summary as contrib_summary
 
 ALL_SCORING_FUNCTIONS = ['norm', 'abs_mrs', 'abs_rs', 'mrs', 'rs', 'rand']
