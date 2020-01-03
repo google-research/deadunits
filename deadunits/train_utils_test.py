@@ -149,51 +149,6 @@ class CrossEntropyLossTest(tf.test.TestCase):
     model.conv_2.reset_saved_values.assert_called_once()
 
 
-class RetrainModelTest(tf.test.TestCase):
-
-  def _get_dataset(self, inp_shape=(2, 32, 32, 3), n_batch=1):
-    all_data_shape = [inp_shape[0] * n_batch] + list(inp_shape[1:])
-    x_all = tf.random_uniform(all_data_shape)
-    y_all = tf.ones((int(all_data_shape[0]),), dtype=tf.int32)
-    data = tf.data.Dataset.from_tensor_slices((x_all,
-                                               y_all)).batch(inp_shape[0])
-    return data
-
-  @mock.patch('deadunits.train_utils.cross_entropy_loss')
-  @mock.patch('tensorflow.GradientTape')
-  def testTotalIter(self, mock_tape, mock_loss):
-    mock_loss.return_value = (0.5, None, None)
-    mock_tape_instance = mock.Mock(gradient=mock.Mock(return_value=[None]))
-    mock_tape.return_value.__enter__.return_value = mock_tape_instance
-    model = mock.Mock()
-    model.variables = [None]
-    n_iter = 5
-    d_set = self._get_dataset(n_batch=n_iter)
-    optimizer = mock.Mock()
-    train_utils.retrain_model(model, n_iter, d_set, optimizer)
-    self.assertEqual(mock_loss.call_count, n_iter)
-    self.assertEqual(optimizer.apply_gradients.call_count, n_iter)
-
-  @mock.patch('deadunits.train_utils.cross_entropy_loss')
-  @mock.patch('tensorflow.GradientTape')
-  def testCurrentIter(self, mock_tape, mock_loss):
-    mock_loss.return_value = (0.5, None, None)
-    mock_tape_instance = mock.Mock(gradient=mock.Mock(return_value=[None]))
-    mock_tape.return_value.__enter__.return_value = mock_tape_instance
-    model = mock.Mock()
-    model.variables = [None]
-    n_iter = 5
-    d_set = self._get_dataset(n_batch=n_iter)
-    optimizer = mock.Mock()
-    c_iter_mock = mock.Mock()
-    train_utils.retrain_model(model, n_iter, d_set, optimizer,
-                              global_step=c_iter_mock)
-    self.assertEqual(mock_loss.call_count, n_iter)
-    self.assertEqual(optimizer.apply_gradients.call_count, n_iter)
-    for _, kwargs in optimizer.apply_gradients.call_args_list:
-      self.assertEqual(c_iter_mock, kwargs['global_step'])
-
-
 class GetOptimizerTest(tf.test.TestCase):
 
   def testNoSchedule(self):
