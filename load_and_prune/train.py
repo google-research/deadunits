@@ -34,7 +34,7 @@ from deadunits import train_utils
 from deadunits import utils
 from deadunits.train_utils import cross_entropy_loss
 import gin
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',
