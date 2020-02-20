@@ -24,8 +24,6 @@ from __future__ import print_function
 from deadunits import unitscorers
 import numpy as np
 import tensorflow.compat.v1 as tf
-from tensorflow.contrib.eager.python import tfe as contrib_eager
-tfe = contrib_eager
 tf.enable_eager_execution()
 
 
@@ -33,7 +31,7 @@ class NormScoreTest(tf.test.TestCase):
 
   def testDefaultL2(self):
     a = tf.reshape(tf.range(30, dtype=tf.float32), (3, 2, 5))
-    v = tfe.Variable(a)
+    v = tf.Variable(a)
     scora_a = unitscorers.norm_score(a)
     score_v = unitscorers.norm_score(v)
     self.assertAllEqual(scora_a, score_v)

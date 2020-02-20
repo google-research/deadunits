@@ -25,9 +25,6 @@ from __future__ import division
 from __future__ import print_function
 from six.moves import range
 import tensorflow.compat.v1 as tf
-from tensorflow.contrib.eager.python import tfe as contrib_eager
-
-tfe = contrib_eager
 
 
 class MaskedLayer(tf.keras.layers.Wrapper):
@@ -36,7 +33,7 @@ class MaskedLayer(tf.keras.layers.Wrapper):
   Example Usage:
     `ml = MaskedLayer(tf.keras.layers.Dense(32))`
 
-  To ensure masks are saved properly, initiate tfe.Checkpoint object after
+  To ensure masks are saved properly, initiate tf.train.Checkpoint object after
     masks are generated.
   This layer can be used for two tasks.
   1. Pruning
@@ -521,7 +518,7 @@ class MeanReplacer(tf.keras.layers.Layer):
     """
     if is_replacing is None:
       is_replacing = self.is_replacing
-    output = tfe.Variable(inputs)
+    output = tf.Variable(inputs)
     if is_replacing:
       # If active units empty give a warning and return the input.
       if not self._active_units:

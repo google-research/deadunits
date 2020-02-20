@@ -25,7 +25,6 @@ from deadunits import train_utils
 import mock
 from six.moves import range
 import tensorflow.compat.v1 as tf
-from tensorflow.contrib import metrics as contrib_metrics
 
 
 class PruningScheduleTest(parameterized.TestCase, tf.test.TestCase):
@@ -102,7 +101,8 @@ class CrossEntropyLossTest(tf.test.TestCase):
     self.assertEqual(total_samples, n_sample)
     logits = self.get_logits(n_sample, n_out)
     predictions = tf.cast(tf.argmax(logits, 1), y.dtype)
-    true_acc = contrib_metrics.accuracy(tf.squeeze(y), predictions)
+    true_acc = tf.reduce_mean(
+        tf.cast(tf.equal(y, predictions), dtype=tf.float32))
     self.assertAllClose(acc, true_acc)
 
   def testSingleBatch(self):

@@ -25,9 +25,7 @@ from deadunits import model_defs
 import gin
 from six.moves import zip
 import tensorflow.compat.v1 as tf
-from tensorflow.contrib.eager.python import tfe as contrib_eager
 
-tfe = contrib_eager
 INPUT_SHAPES = {'cub200': (2, 224, 224, 3),
                 'cifar10': (2, 32, 32, 3),
                 'imagenet': (2, 224, 224, 3)}
@@ -70,7 +68,7 @@ def get_model(model_arch_name=gin.REQUIRED,
   # Initializing model.
   model(dummy_var)
   if load_path is not None:
-    checkpoint = tfe.Checkpoint(model=model)
+    checkpoint = tf.train.Checkpoint(model=model)
     if not tf.train.checkpoint_exists(load_path):
       raise IOError('No checkpoint at: %s' % load_path)
     checkpoint.restore(load_path)

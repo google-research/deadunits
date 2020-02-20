@@ -34,7 +34,7 @@ class ProbePruningTest(tf.test.TestCase):
   @mock.patch('deadunits.pruner.get_pruning_measurements')
   @mock.patch('deadunits.pruner.prune_model_with_scores')
   @mock.patch('deadunits.train_utils.cross_entropy_loss')
-  @mock.patch('tensorflow.contrib.summary.scalar')
+  @mock.patch('tensorflow.compat.v2.summary.scalar')
   def testDefault(self, mock_summary, mock_loss, mock_prune_model,
                   mock_pruning_measurements, mock_process_l2p):
     mock_getitem = mock.Mock()
@@ -63,7 +63,7 @@ class ProbePruningTest(tf.test.TestCase):
   @mock.patch('deadunits.pruner.get_pruning_measurements')
   @mock.patch('deadunits.pruner.prune_model_with_scores')
   @mock.patch('deadunits.train_utils.cross_entropy_loss')
-  @mock.patch('tensorflow.contrib.summary.scalar')
+  @mock.patch('tensorflow.compat.v2.summary.scalar')
   def testNRetrain(self, mock_summary, mock_loss, mock_prune_model,
                    mock_pruning_measurements, mock_process_l2p):
     mock_getitem = mock.Mock()

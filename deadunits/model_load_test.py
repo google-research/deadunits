@@ -28,8 +28,6 @@ from deadunits import layers
 from deadunits import model_defs
 from deadunits import model_load
 import tensorflow.compat.v1 as tf
-from tensorflow.contrib.eager.python import tfe as contrib_eager
-tfe = contrib_eager
 tf.enable_eager_execution()
 
 
@@ -62,7 +60,7 @@ class GetModelTest(parameterized.TestCase, tf.test.TestCase):
     save_path = self.get_temp_dir()
     shutil.rmtree(save_path, ignore_errors=True)
     os.mkdir(save_path)
-    checkpoint = tfe.Checkpoint(model=model)
+    checkpoint = tf.train.Checkpoint(model=model)
     checkpoint.save(os.path.join(save_path, 'ckpt'))
     load_path = tf.train.latest_checkpoint(save_path)
     return load_path
