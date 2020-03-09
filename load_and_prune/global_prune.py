@@ -35,6 +35,8 @@ from deadunits import train_utils
 from deadunits import utils
 from deadunits.train_utils import cross_entropy_loss
 import gin
+from six.moves import range
+from six.moves import zip
 import tensorflow.compat.v1 as tf
 from tensorflow.compat.v2 import summary
 
@@ -154,7 +156,7 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
       grads = tape.gradient(loss_train, model.variables)
       # Updating the model.
       optimizer.apply_gradients(
-          zip(grads, model.variables), global_step=step_counter)
+          list(zip(grads, model.variables)), global_step=step_counter)
       if step_counter.numpy() % log_interval == 0:
         summary.scalar('loss_train', loss_train)
         summary.image('x', x, max_outputs=1)
