@@ -27,6 +27,8 @@ import os
 
 from absl import app
 from absl import flags
+from absl import logging
+
 from deadunits import data
 from deadunits import model_load
 from deadunits import pruner
@@ -34,10 +36,7 @@ from deadunits import train_utils
 from deadunits import utils
 from deadunits.train_utils import cross_entropy_loss
 import gin
-from six.moves import zip
-import tensorflow.compat.v1 as tf
-from tensorflow.compat.v2 import summary
-
+import tensorflow.compat.v2 as tf
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',
@@ -84,61 +83,59 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
   """
   if n_finetune <= 0:
     raise ValueError('n_finetune must be positive: given %d' % n_finetune)
-  optimizer = tf.train.MomentumOptimizer(lr, momentum)
-  tf.logging.info('Using outdir: %s', model_dir)
+  optimizer = tf.keras.optimizers.SGD(learning_rate=lr, momentum=momentum)
+  logging.info('Using outdir: %s', model_dir)
   latest_cpkt = tf.train.latest_checkpoint(model_dir)
   if not latest_cpkt:
     raise OSError('No checkpoint found in %s' % model_dir)
-  tf.logging.info('Using latest checkpoint at %s', latest_cpkt)
+  logging.info('Using latest checkpoint at %s', latest_cpkt)
   model = model_load.get_model(load_path=latest_cpkt,
                                dataset_name=dataset_name)
-  tf.logging.info('Model init-config: %s', model.init_config)
-  tf.logging.info('Model forward chain: %s', str(model.forward_chain))
+  logging.info('Model init-config: %s', model.init_config)
+  logging.info('Model forward chain: %s', str(model.forward_chain))
   datasets = data.get_datasets(dataset_name=dataset_name)
   dataset_train, dataset_test, subset_val, subset_test, subset_val2 = datasets
 
   unit_pruner = pruner.UnitPruner(model, subset_val)
-  step_counter = tf.train.get_or_create_global_step()
+  step_counter = optimizer.iteration
+  tf.summary.experimental.set_step(step_counter)
   current_epoch = tf.Variable(1)
   current_layer_index = tf.Variable(0)
   checkpoint = tf.train.Checkpoint(
       optimizer=optimizer,
       model=model,
-      step_counter=step_counter,
       current_epoch=current_epoch,
       current_layer_index=current_layer_index)
   latest_cpkt = tf.train.latest_checkpoint(FLAGS.outdir)
   if latest_cpkt:
-    tf.logging.info('Using latest checkpoint at %s', latest_cpkt)
+    logging.info('Using latest checkpoint at %s', latest_cpkt)
     # Restore variables on creation if a checkpoint exists.
     checkpoint.restore(latest_cpkt)
-    tf.logging.info('Resuming with epoch: %d', current_epoch.numpy())
-  summary.experimental.set_step(step_counter)
+    logging.info('Resuming with epoch: %d', current_epoch.numpy())
   c_epoch = current_epoch.numpy()
   c_layer_index = current_layer_index.numpy()
   # Starting from the first batch, we perform pruning every `n_finetune` step.
   # Layers pruned one by one according to the pruning schedule given.
-  # with contrib_summary.record_summaries_every_n_global_steps(
-  #     log_interval, global_step=step_counter):
+
   while c_epoch <= epochs:
-    tf.logging.info('Starting Epoch: %d', c_epoch)
+    logging.info('Starting Epoch: %d', c_epoch)
     for (x, y) in dataset_train:
       # Every `n_finetune` step perform pruning.
       if (step_counter.numpy() % n_finetune == 0 and
           c_layer_index < len(pruning_schedule)):
-        tf.logging.info('Pruning at iteration: %d', step_counter.numpy())
+        logging.info('Pruning at iteration: %d', step_counter.numpy())
         l_name, pruning_factor = pruning_schedule[c_layer_index]
         unit_pruner.prune_layer(l_name, pruning_factor=pruning_factor)
 
         train_utils.log_loss_acc(model, subset_val2, subset_test)
         train_utils.log_sparsity(model)
         # Re-init optimizer and therefore remove previous momentum.
-        optimizer = tf.train.MomentumOptimizer(lr, momentum)
+        optimizer = tf.keras.optimizers.SGD(learning_rate=lr, momentum=momentum)
         c_layer_index += 1
         current_layer_index.assign(c_layer_index)
       else:
         if step_counter.numpy() % log_interval == 0:
-          tf.logging.info('Iteration: %d', step_counter.numpy())
+          logging.info('Iteration: %d', step_counter.numpy())
           train_utils.log_loss_acc(model, subset_val2, subset_test)
           train_utils.log_sparsity(model)
       with tf.GradientTape() as tape:
@@ -148,8 +145,8 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
       optimizer.apply_gradients(
           list(zip(grads, model.variables)), global_step=step_counter)
       if step_counter.numpy() % log_interval == 0:
-        summary.scalar('loss_train', loss_train)
-        summary.image('x', x, max_outputs=1)
+        tf.summary.scalar('loss_train', loss_train)
+        tf.summary.image('x', x, max_outputs=1)
     # End of an epoch.
     c_epoch += 1
     current_epoch.assign(c_epoch)
@@ -161,44 +158,43 @@ def prune_and_finetune_model(pruning_schedule=gin.REQUIRED,
       checkpoint = tf.train.Checkpoint(
           optimizer=optimizer,
           model=model,
-          step_counter=step_counter,
           current_epoch=current_epoch,
           current_layer_index=current_layer_index)
-      tf.logging.info('Checkpoint after epoch: %d', c_epoch - 1)
+      logging.info('Checkpoint after epoch: %d', c_epoch - 1)
       checkpoint.save(os.path.join(FLAGS.outdir, 'ckpt-%d' % (c_epoch - 1)))
 
   # Test model
   test_loss, test_acc, n_samples = cross_entropy_loss(
       model, dataset_test, calculate_accuracy=True)
-  summary.scalar('test_loss_all', test_loss)
-  summary.scalar('test_acc_all', test_acc)
-  tf.logging.info('Overall_test_loss: %.4f, Overall_test_acc: %.4f, '
-                  'n_samples: %d', test_loss, test_acc, n_samples)
+  tf.summary.scalar('test_loss_all', test_loss)
+  tf.summary.scalar('test_acc_all', test_acc)
+  logging.info('Overall_test_loss: %.4f, Overall_test_acc: %.4f, n_samples: %d',
+               test_loss, test_acc, n_samples)
 
 
 def main(_):
-  tf.enable_eager_execution()
+  tf.enable_v2_behavior()
   gin.parse_config_files_and_bindings(FLAGS.gin_config, FLAGS.gin_binding)
-  if tf.gfile.Exists(FLAGS.outdir):
+  if tf.io.gfile.exists(FLAGS.outdir):
     if FLAGS.override_existing_dir:
-      tf.gfile.DeleteRecursively(FLAGS.outdir)
-      tf.gfile.MakeDirs(FLAGS.outdir)
-      tf.logging.info('The folder:%s has been re-generated', FLAGS.outdir)
+      tf.io.gfile.rmtree(FLAGS.outdir)
+      tf.io.gfile.makedirs(FLAGS.outdir)
+      logging.info('The folder:%s has been re-generated', FLAGS.outdir)
     else:
-      tf.logging.warning('The folder:%s exists', FLAGS.outdir)
+      logging.warning('The folder:%s exists', FLAGS.outdir)
   else:
-    tf.gfile.MakeDirs(FLAGS.outdir)
-    tf.logging.info('The folder:%s has been generated', FLAGS.outdir)
+    tf.io.gfile.makedirs(FLAGS.outdir)
+    logging.info('The folder:%s has been generated', FLAGS.outdir)
   tb_path = os.path.join(FLAGS.outdir, 'tb')
-  summary_writer = summary.create_file_writer(tb_path, flush_millis=1000)
+  summary_writer = tf.summary.create_file_writer(tb_path, flush_millis=1000)
   with summary_writer.as_default():
     prune_and_finetune_model()
   logconfigfile_path = os.path.join(FLAGS.outdir, 'config.log')
-  if tf.gfile.Exists(logconfigfile_path):
+  if tf.io.gfile.exists(logconfigfile_path):
     # This should happen when the process is preempted and continued afterwards.
-    tf.logging.warning('The log_file: %s exists', logconfigfile_path)
+    logging.warning('The log_file: %s exists', logconfigfile_path)
   else:
-    with tf.gfile.GFile(logconfigfile_path, 'w') as f:
+    with tf.io.gfile.GFile(logconfigfile_path, 'w') as f:
       f.write('# Gin-Config:\n %s' % gin.config.operative_config_str())
 
 

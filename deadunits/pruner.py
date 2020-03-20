@@ -38,16 +38,16 @@ from __future__ import absolute_import
 from __future__ import division
 
 from __future__ import print_function
-
 import collections
+from absl import logging
+
 from deadunits import layers
 from deadunits import train_utils
 from deadunits import unitscorers
 from deadunits import utils
 import gin
 import six
-import tensorflow.compat.v1 as tf
-from tensorflow.compat.v2 import summary
+import tensorflow.compat.v2 as tf
 
 ALL_SCORING_FUNCTIONS = ['norm', 'abs_mrs', 'abs_rs', 'mrs', 'rs', 'rand']
 
@@ -124,8 +124,8 @@ class UnitPruner(object):
       raise ValueError(
           'pruning_factor: %s should be in (0, 1)' % pruning_factor)
 
-    tf.logging.info('Pruning layer `%s` with: %s, f:%.2f',
-                    layer_name, pruning_method, pruning_factor)
+    logging.info('Pruning layer `%s` with: %s, f:%.2f', layer_name,
+                 pruning_method, pruning_factor)
     input_shapes = {layer_name: getattr(self.model, layer_name + '_ts').xshape}
 
     # Calculating the scoring function/mean value.
@@ -188,7 +188,7 @@ class UnitPruner(object):
                                    ALL_SCORING_FUNCTIONS))
     if baselines is None:
       baselines = {}
-    tf.logging.info('Prunning with: %s, is_bp: %s', pruning_method, is_bp)
+    logging.info('Prunning with: %s, is_bp: %s', pruning_method, is_bp)
 
     # Calculating the scoring function/mean value.
     is_abs = pruning_method.startswith('abs')
@@ -251,14 +251,14 @@ class UnitPruner(object):
         n_pruned = 0
         layer_smallest_score = tf.reduce_min(scores[l_name]).numpy()
 
-      tf.logging.info('Layer:%s, min:%f', l_name, layer_smallest_score)
+      logging.info('Layer:%s, min:%f', l_name, layer_smallest_score)
       if smallest_score is None or (layer_smallest_score < smallest_score):
         smallest_score = layer_smallest_score
         smallest_l_name = l_name
         # We want to prune one more than before.
         smallest_nprune = n_pruned + 1
-    tf.logging.info('UNIT_PRUNED, layer:%s, n_pruned:%d',
-                    smallest_l_name, smallest_nprune)
+    logging.info('UNIT_PRUNED, layer:%s, n_pruned:%d', smallest_l_name,
+                 smallest_nprune)
     mean_values = {smallest_l_name: mean_values[smallest_l_name]}
     scores = {smallest_l_name: scores[smallest_l_name]}
     input_shapes = {
@@ -351,9 +351,8 @@ def probe_pruning(model,
     copied_model = model.clone()
     scalar_summary_tag = 'pruning_penalty%s_%s' % ('_bp' if is_bp else '',
                                                    scoring)
-    tf.logging.info('Pruning following layers: %s, '
-                    'Using %s %s bias_prop.' % (layers2prune, scoring,
-                                                'with' if is_bp else 'without'))
+    logging.info('Pruning following layers: %s, Using %s %s bias_prop.',
+                 layers2prune, scoring, 'with' if is_bp else 'without')
     selected_units_scoring = prune_model_with_scores(
         copied_model, scores[scoring], is_bp, layers2prune, pruning_factor,
         pruning_count, mean_values, input_shapes)
@@ -367,13 +366,13 @@ def probe_pruning(model,
     # units.
     loss_new, _, _ = train_utils.cross_entropy_loss(copied_model, subset_val,
                                                     training=True)
-    summary.scalar(scalar_summary_tag, loss_new - loss_val)
+    tf.summary.scalar(scalar_summary_tag, loss_new - loss_val)
     # Setting training=True, otherwise BatchNorm uses the accumulated mean and
     # std during forward propagation, which causes pruned units to generate
     # non-zero constants.
     loss_new, _, _ = train_utils.cross_entropy_loss(
         copied_model, subset_test, training=True)
-    summary.scalar(scalar_summary_tag + '_test', loss_new - loss_test)
+    tf.summary.scalar(scalar_summary_tag + '_test', loss_new - loss_test)
   return selected_units, mean_values, l2_norms
 
 

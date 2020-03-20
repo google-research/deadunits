@@ -24,7 +24,7 @@ from deadunits import generic_convnet
 from deadunits import model_defs
 import gin
 from six.moves import zip
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf
 
 INPUT_SHAPES = {'cub200': (2, 224, 224, 3),
                 'cifar10': (2, 32, 32, 3),
@@ -69,8 +69,6 @@ def get_model(model_arch_name=gin.REQUIRED,
   model(dummy_var)
   if load_path is not None:
     checkpoint = tf.train.Checkpoint(model=model)
-    if not tf.train.checkpoint_exists(load_path):
-      raise IOError('No checkpoint at: %s' % load_path)
     checkpoint.restore(load_path)
     if prepare_for_pruning:
       old_model = model

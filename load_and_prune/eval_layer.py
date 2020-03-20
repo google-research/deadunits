@@ -25,6 +25,8 @@ import json
 import os
 from absl import app
 from absl import flags
+from absl import logging
+
 from deadunits import data
 from deadunits import model_load
 from deadunits import pruner
@@ -32,7 +34,7 @@ from deadunits import train_utils
 from deadunits import utils
 import gin
 import numpy as np
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',
@@ -87,11 +89,11 @@ def prune_layer_and_eval(dataset_name='cifar10',
     ValueError: when the scoring function key is not valid.
     OSError: when there is no checkpoint found.
   """
-  tf.logging.info('Looking checkpoint at: %s', model_dir)
+  logging.info('Looking checkpoint at: %s', model_dir)
   latest_cpkt = tf.train.latest_checkpoint(model_dir)
   if not latest_cpkt:
     raise OSError('No checkpoint found in %s' % model_dir)
-  tf.logging.info('Using latest checkpoint at %s', latest_cpkt)
+  logging.info('Using latest checkpoint at %s', latest_cpkt)
   model = model_load.get_model(load_path=latest_cpkt,
                                dataset_name=dataset_name)
   datasets = data.get_datasets(dataset_name=dataset_name,
@@ -112,9 +114,9 @@ def prune_layer_and_eval(dataset_name='cifar10',
     scores = all_scores[scoring]
     d_path = os.path.join(FLAGS.outdir, '%d-%s-%s-%s.pickle' % (
         val_size, l_name, scoring, str(is_bp)))
-    tf.logging.info(d_path)
+    logging.info(d_path)
     if tf.gfile.Exists(d_path):
-      tf.logging.warning('File %s exists, skipping.', d_path)
+      logging.warning('File %s exists, skipping.', d_path)
     else:
       ls_train_loss = []
       ls_train_acc = []
@@ -126,8 +128,8 @@ def prune_layer_and_eval(dataset_name='cifar10',
       c_slice = np.linspace(0,
                             n_unit_pruned_max,
                             n_exps, dtype=np.int32)
-      tf.logging.info('Layer:%s, n_units:%d, c_slice:%s',
-                      l_name, n_units, str(c_slice))
+      logging.info('Layer:%s, n_units:%d, c_slice:%s', l_name, n_units,
+                   str(c_slice))
       for pruning_count in c_slice:
         # Cast from np.int32 to int.
         pruning_count = int(pruning_count)
@@ -140,8 +142,8 @@ def prune_layer_and_eval(dataset_name='cifar10',
             copied_model, subset_test, calculate_accuracy=True)
         train_loss, train_acc, _ = train_utils.cross_entropy_loss(
             copied_model, subset_val2, calculate_accuracy=True)
-        tf.logging.info('is_bp: %s, n: %d, test_loss%f, train_loss:%f',
-                        str(is_bp), pruning_count, test_loss, train_loss)
+        logging.info('is_bp: %s, n: %d, test_loss%f, train_loss:%f', str(is_bp),
+                     pruning_count, test_loss, train_loss)
         ls_train_loss.append(train_loss.numpy())
         ls_test_loss.append(test_loss.numpy())
         ls_test_acc.append(test_acc.numpy())
@@ -151,18 +153,18 @@ def prune_layer_and_eval(dataset_name='cifar10',
 
 
 def main(_):
-  tf.enable_eager_execution()
+  tf.enable_v2_behavior()
   gin.parse_config_files_and_bindings(FLAGS.gin_config, FLAGS.gin_binding)
-  if tf.gfile.Exists(FLAGS.outdir):
+  if tf.io.gfile.exists(FLAGS.outdir):
     if FLAGS.override_existing_dir:
-      tf.gfile.DeleteRecursively(FLAGS.outdir)
-      tf.gfile.MakeDirs(FLAGS.outdir)
-      tf.logging.info('The folder:%s has been generated', FLAGS.outdir)
+      tf.io.gfile.rmtree(FLAGS.outdir)
+      tf.io.gfile.makedirs(FLAGS.outdir)
+      logging.info('The folder:%s has been generated', FLAGS.outdir)
     else:
-      tf.logging.warning('The folder:%s exists', FLAGS.outdir)
+      logging.warning('The folder:%s exists', FLAGS.outdir)
   else:
-    tf.gfile.MakeDirs(FLAGS.outdir)
-    tf.logging.info('The folder:%s has been generated', FLAGS.outdir)
+    tf.io.gfile.makedirs(FLAGS.outdir)
+    logging.info('The folder:%s has been generated', FLAGS.outdir)
   prune_layer_and_eval()
 
 if __name__ == '__main__':

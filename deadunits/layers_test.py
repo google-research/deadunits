@@ -24,10 +24,8 @@ from absl.testing import parameterized
 from deadunits import layers
 from six.moves import range
 from six.moves import zip
-import tensorflow.compat.v1 as tf
-
-
-tf.enable_eager_execution()
+import tensorflow.compat.v2 as tf
+tf.enable_v2_behavior()
 FLAGS = flags.FLAGS
 
 
@@ -45,7 +43,7 @@ class MeanReplacerTest(tf.test.TestCase):
 
   def testSetActiveUnitsFailedAssertions(self):
     l = layers.MeanReplacer(is_replacing=True)
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     #  Layer not yet built.
     with self.assertRaises(AssertionError):
       l.set_active_units([0])
@@ -61,7 +59,7 @@ class MeanReplacerTest(tf.test.TestCase):
 
   def testIsReplacing(self):
     l = layers.MeanReplacer(is_replacing=True)
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     x_mean = tf.broadcast_to(tf.reduce_mean(x, axis=0), x.shape)
     y = l(x)
     l.set_active_units([0, 0, 2])
@@ -79,7 +77,7 @@ class MeanReplacerTest(tf.test.TestCase):
     l = layers.MeanReplacer()
     expected_config = {'_active_units': [], 'is_replacing': False}
     self.assertDictContainsSubset(expected_config, l.get_config())
-    l(tf.random_uniform((4, 5)))
+    l(tf.random.uniform((4, 5)))
     l.set_active_units([3, 2])
     expected_config = {'_active_units': [2, 3], 'is_replacing': False}
     self.assertDictContainsSubset(expected_config, l.get_config())
@@ -101,15 +99,15 @@ class TaylorScorerTest(tf.test.TestCase):
   def testIdentity(self):
     l = layers.TaylorScorer(
         compute_removal_saliency=False, compute_mean_replacement_saliency=False)
-    a = tf.random_uniform((3, 5))
+    a = tf.random.uniform((3, 5))
     self.assertAllEqual(l(a), a)
-    a = tf.random_uniform((3, 5, 5, 2))
+    a = tf.random.uniform((3, 5, 5, 2))
     self.assertAllEqual(l(a), a)
 
   def testAggregationRS(self):
     l = layers.TaylorScorer(compute_removal_saliency=False,
                             compute_mean_replacement_saliency=False)
-    x1 = tf.Variable(tf.random_uniform((3, 5)))
+    x1 = tf.Variable(tf.random.uniform((3, 5)))
     with tf.GradientTape() as tape:
       y = l(x1, compute_removal_saliency=True)
       loss = tf.reduce_sum(y)
@@ -120,7 +118,7 @@ class TaylorScorerTest(tf.test.TestCase):
     y = l(x1)
     self.assertIsNone(l.get_saved_values('rs'))
     # Another input
-    x2 = tf.Variable(tf.random_uniform((3, 5)))
+    x2 = tf.Variable(tf.random.uniform((3, 5)))
     with tf.GradientTape() as tape:
       y = l(x2, compute_removal_saliency=True)
       loss = tf.reduce_sum(y)
@@ -144,11 +142,11 @@ class TaylorScorerTest(tf.test.TestCase):
   def testAggregationMean(self):
     l = layers.TaylorScorer(compute_removal_saliency=False,
                             compute_mean_replacement_saliency=False)
-    x1 = tf.random_uniform((3, 5))
+    x1 = tf.random.uniform((3, 5))
     l(x1)
     first_mean = l.get_saved_values('mean')
     self.assertEqual(len(l._mean), 2)
-    x2 = tf.random_uniform((6, 5))
+    x2 = tf.random.uniform((6, 5))
     # Removing the previous one
     l(x2)
     second_mean = l.get_saved_values('mean')
@@ -159,23 +157,22 @@ class TaylorScorerTest(tf.test.TestCase):
 
   def testL2Norm(self):
     l = layers.TaylorScorer()
-    x1 = tf.random_uniform((3, 5))
+    x1 = tf.random.uniform((3, 5))
     l(x1)
     self.assertIsNone(l.get_saved_values('l2norm'))
     self.assertIsNone(l._l2norm)
     l(x1, save_l2norm=True)
-    correct_l2normsquared = tf.square(tf.norm(x1, axis=0)) / x1.shape[0].value
+    correct_l2normsquared = tf.square(tf.norm(x1, axis=0)) / x1.shape[0]
     self.assertAllClose(l.get_saved_values('l2norm'),
                         correct_l2normsquared)
-    x2 = tf.random_uniform((3, 5))
+    x2 = tf.random.uniform((3, 5))
     l(x2, save_l2norm=True, aggregate_values=True)
-    correct_l2normsquared2 = tf.square(tf.norm(x2, axis=0)) / x2.shape[0].value
+    correct_l2normsquared2 = tf.square(tf.norm(x2, axis=0)) / x2.shape[0]
     self.assertAllClose(l.get_saved_values('l2norm'),
                         (correct_l2normsquared+correct_l2normsquared2) / 2)
 
   def testIsMrsTrue(self):
-    values = [tf.random_uniform((3, 5)),
-              tf.random_uniform((3, 5, 5, 4))]
+    values = [tf.random.uniform((3, 5)), tf.random.uniform((3, 5, 5, 4))]
     for inp in values:
       n_dim = len(inp.shape)
       l = layers.TaylorScorer(compute_removal_saliency=False,
@@ -208,17 +205,16 @@ class TaylorScorerTest(tf.test.TestCase):
   def testGetMeanValues(self):
     l = layers.TaylorScorer(compute_removal_saliency=False,
                             compute_mean_replacement_saliency=False)
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     l(x)
     x_mean = tf.reduce_mean(x, axis=0)
     self.assertAllEqual(x_mean, l.get_saved_values('mean'))
     self.assertAllEqual(tf.broadcast_to(x_mean, x.shape),
                         l.get_saved_values('mean',
                                            broadcast_to_input_shape=True))
-    rand_mask = tf.cast(tf.random_uniform(x_mean.shape[:1],
-                                          dtype=tf.int32,
-                                          maxval=2),
-                        tf.float32)
+    rand_mask = tf.cast(
+        tf.random.uniform(x_mean.shape[:1], dtype=tf.int32, maxval=2),
+        tf.float32)
     self.assertAllEqual(rand_mask * x_mean,
                         l.get_saved_values('mean', unit_mask=rand_mask))
     self.assertAllEqual(tf.broadcast_to(rand_mask * x_mean, x.shape),
@@ -228,9 +224,9 @@ class TaylorScorerTest(tf.test.TestCase):
   def testGetMeanValuesAggregated(self):
     l = layers.TaylorScorer(compute_removal_saliency=False,
                             compute_mean_replacement_saliency=False)
-    x1 = tf.random_uniform((3, 5))
+    x1 = tf.random.uniform((3, 5))
     l(x1)
-    x2 = tf.random_uniform((6, 5))
+    x2 = tf.random.uniform((6, 5))
     l(x2, aggregate_values=True)
 
     correct_mean = tf.reduce_mean(tf.concat([x1, x2], 0), axis=0)
@@ -238,8 +234,7 @@ class TaylorScorerTest(tf.test.TestCase):
                         correct_mean)
 
   def testIsRsTrue(self):
-    values = [tf.random_uniform((3, 5)),
-              tf.random_uniform((3, 5, 5, 4))]
+    values = [tf.random.uniform((3, 5)), tf.random.uniform((3, 5, 5, 4))]
     for inp in values:
       n_dim = len(inp.shape)
       l = layers.TaylorScorer(compute_removal_saliency=True,
@@ -311,12 +306,12 @@ class TaylorScorerTest(tf.test.TestCase):
             32, activation=lambda x: tf.nn.log_softmax(x, axis=1))
     ])
     # Building the model. Don't need the return value.
-    model(tf.random_uniform((3, 5)))
+    model(tf.random.uniform((3, 5)))
     l_before.weights[0].assign(
         tf.concat([l_before.weights[0][:, 1:],
                    tf.zeros((5, 1))], axis=1))
 
-    x = tf.Variable(tf.random_uniform((3, 5)))
+    x = tf.Variable(tf.random.uniform((3, 5)))
     a_mean = tf.reduce_mean(l_before(x), axis=0)
     with tf.GradientTape() as tape:
       y = model(x)
@@ -341,9 +336,9 @@ class TaylorScorerTest(tf.test.TestCase):
 class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
 
   def testNoMasking(self):
-    layers_to_test = [(tf.keras.layers.Dense(12), tf.random_uniform((3, 5))),
+    layers_to_test = [(tf.keras.layers.Dense(12), tf.random.uniform((3, 5))),
                       (tf.keras.layers.Conv2D(12, 5),
-                       tf.random_uniform((3, 10, 10, 5)))]
+                       tf.random.uniform((3, 10, 10, 5)))]
 
     for l, x in layers_to_test:
       ml = layers.MaskedLayer(l, name='test')
@@ -367,14 +362,14 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
     ml = layers.MaskedLayer(l, name='test')
     with self.assertRaises(AssertionError):
       ml.set_mask(tf.zeros(4))
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     # Bulding the layer and initializing the parameters.
     ml(x)
     with self.assertRaises(AssertionError):
       # Wrong mask_shape
       ml.set_mask(tf.zeros(3, 12))
     l_weights = ml.layer.weights[0]
-    w_mask = tf.random_uniform(l_weights.shape, maxval=2, dtype=tf.int32)
+    w_mask = tf.random.uniform(l_weights.shape, maxval=2, dtype=tf.int32)
     # To get pruned parameters.
     w_mask_not_bool = tf.logical_not(tf.cast(w_mask, tf.bool))
     ml.set_mask(w_mask)
@@ -382,29 +377,29 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllEqual(w_mask, ml.mask_weight.numpy())
     self.assertEqual(l_weights.dtype, ml.mask_weight.dtype)
     # Check the assign works.
-    w_mask = tf.random_uniform(l_weights.shape, maxval=2, dtype=tf.int32)
+    w_mask = tf.random.uniform(l_weights.shape, maxval=2, dtype=tf.int32)
     ml.set_mask(w_mask)
     self.assertAllEqual(w_mask, ml.mask_weight.numpy())
     self.assertAllEqual(ml.mask_bias.numpy(),
                         tf.ones_like(ml.mask_bias))
     # weights are not masked yet
     self.assertNotEqual(
-        tf.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)).numpy(),
-        0)
+        tf.math.count_nonzero(tf.boolean_mask(l_weights,
+                                              w_mask_not_bool)).numpy(), 0)
 
   def testSetBiasMasking(self):
     l = tf.keras.layers.Dense(12, bias_initializer='glorot_uniform')
     ml = layers.MaskedLayer(l, name='test')
     with self.assertRaises(AssertionError):
       ml.set_mask(tf.zeros(10), is_bias=True)
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     # Bulding the layer and initializing the parameters.
     ml(x)
     with self.assertRaises(AssertionError):
       # Wrong mask_shape
       ml.set_mask(tf.zeros(5, 12), is_bias=True)
     l_bias = ml.layer.weights[1]
-    b_mask = tf.random_uniform(l_bias.shape, maxval=2, dtype=tf.int32)
+    b_mask = tf.random.uniform(l_bias.shape, maxval=2, dtype=tf.int32)
     # To get pruned parameters.
     b_mask_not_bool = tf.logical_not(tf.cast(b_mask, tf.bool))
     ml.set_mask(b_mask, is_bias=True)
@@ -412,54 +407,51 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
     self.assertAllEqual(b_mask, ml.mask_bias.numpy())
     self.assertEqual(l_bias.dtype, ml.mask_bias.dtype)
     # Check the assign works.
-    b_mask = tf.random_uniform(l_bias.shape, maxval=2, dtype=tf.int32)
+    b_mask = tf.random.uniform(l_bias.shape, maxval=2, dtype=tf.int32)
     ml.set_mask(b_mask, is_bias=True)
     self.assertAllEqual(b_mask, ml.mask_bias.numpy())
     self.assertAllEqual(ml.mask_weight.numpy(),
                         tf.ones_like(ml.mask_weight))
     # weights are not masked yet
     self.assertNotEqual(
-        tf.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)).numpy(), 0)
+        tf.math.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)), 0)
 
   def testMaskingForwardWeights(self):
     l = tf.keras.layers.Dense(12)
     ml = layers.MaskedLayer(l, name='test')
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     # Bulding the layer and initializing the parameters.
     ml(x)
     l_weights = ml.layer.weights[0]
-    w_mask = tf.random_uniform(l_weights.shape, maxval=2, dtype=tf.int32)
+    w_mask = tf.random.uniform(l_weights.shape, maxval=2, dtype=tf.int32)
     w_mask_not_bool = tf.logical_not(tf.cast(w_mask, tf.bool))
     ml.set_mask(w_mask)
     with tf.GradientTape() as tape:
       y = ml(x)
       # All weights under the mask expected to be zero after forward call.
       self.assertEqual(
-          tf.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)).numpy(),
-          0)
+          tf.math.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)), 0)
       loss = tf.reduce_sum(y)
     grads = tape.gradient(loss, l.variables)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    optimizer = tf.keras.optimizers.SGD(learning_rate=0.1)
     optimizer.apply_gradients(list(zip(grads, l.variables)))
     # Weights are updated and they are not necesarrily zero anymore.
     self.assertNotEqual(
-        tf.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)).numpy(),
-        0)
+        tf.math.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)), 0)
     # All weights under the mask expected to be zero after forward call.
     # Don't need the return value.
     ml(x)
     self.assertEqual(
-        tf.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)).numpy(),
-        0)
+        tf.math.count_nonzero(tf.boolean_mask(l_weights, w_mask_not_bool)), 0)
 
   def testMaskingForwardBias(self):
     l = tf.keras.layers.Dense(12)
     ml = layers.MaskedLayer(l, name='test')
-    x = tf.random_uniform((3, 5))
+    x = tf.random.uniform((3, 5))
     # Bulding the layer and initializing the parameters.
     ml(x)
     l_bias = ml.layer.weights[1]
-    b_mask = tf.random_uniform(l_bias.shape, maxval=2, dtype=tf.int32)
+    b_mask = tf.random.uniform(l_bias.shape, maxval=2, dtype=tf.int32)
     # To get pruned parameters.
     b_mask_not_bool = tf.logical_not(tf.cast(b_mask, tf.bool))
     ml.set_mask(b_mask, is_bias=True)
@@ -467,19 +459,19 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
       y = ml(x)
       # All weights under the mask expected to be zero after forward call.
       self.assertEqual(
-          tf.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)).numpy(), 0)
+          tf.math.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)), 0)
       loss = tf.reduce_sum(y)
     grads = tape.gradient(loss, l.variables)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
+    optimizer = tf.keras.optimizers.SGD(learning_rate=0.1)
     optimizer.apply_gradients(list(zip(grads, l.variables)))
     # Weights are updated and they are not necesarrily zero anymore.
     self.assertNotEqual(
-        tf.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)).numpy(), 0)
+        tf.math.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)), 0)
     # All weights under the mask expected to be zero after forward call.
     # Don't need the return value.
     ml(x)
     self.assertEqual(
-        tf.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)).numpy(), 0)
+        tf.math.count_nonzero(tf.boolean_mask(l_bias, b_mask_not_bool)), 0)
 
   @parameterized.named_parameters(
       ('_1', tf.ones(6), True, True, 0.0),
@@ -493,7 +485,7 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
   def testGetSparsity(self, mask, is_bias, weight_only, sparsity):
     layer = tf.keras.layers.Dense(6, bias_initializer='glorot_uniform')
     masked_layer = layers.MaskedLayer(layer, name='test')
-    x = tf.random_uniform((3, 2))
+    x = tf.random.uniform((3, 2))
     # Bulding the layer and initializing the parameters.
     masked_layer(x)
     masked_layer.set_mask(mask, is_bias=is_bias)
@@ -502,7 +494,7 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
 
   def testCheckpoint(self):
     test_path = FLAGS.test_tmpdir
-    masked_layer_1 = layers.MaskedLayer(tf.layers.Dense(4))
+    masked_layer_1 = layers.MaskedLayer(tf.keras.layers.Dense(4))
     checkpoint = tf.train.Checkpoint(model=masked_layer_1)
     x = tf.ones((2, 5))
     y_1 = masked_layer_1(x)
@@ -511,8 +503,8 @@ class MaskedLayerTest(parameterized.TestCase, tf.test.TestCase):
     c_path = checkpoint.save(test_path)
 
     # Loading
-    masked_layer_2 = layers.MaskedLayer(tf.layers.Dense(4),
-                                        mask_initializer=tf.initializers.zeros)
+    masked_layer_2 = layers.MaskedLayer(
+        tf.keras.layers.Dense(4), mask_initializer=tf.initializers.zeros)
     checkpoint = tf.train.Checkpoint(model=masked_layer_2)
     checkpoint.restore(c_path)
 

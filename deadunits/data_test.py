@@ -23,9 +23,7 @@ from deadunits import data
 import mock
 from six.moves import range
 from six.moves import zip
-import tensorflow.compat.v1 as tf
-
-tf.enable_eager_execution()
+import tensorflow.compat.v2 as tf
 
 
 class GetDatasetsTest(tf.test.TestCase):
@@ -176,4 +174,5 @@ class GetDatasetsTest(tf.test.TestCase):
     self.assertEqual(y.shape, [bs])
 
 if __name__ == '__main__':
+  tf.enable_v2_behavior()
   tf.test.main()

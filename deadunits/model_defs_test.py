@@ -22,14 +22,13 @@ from __future__ import print_function
 
 from deadunits import model_defs
 from deadunits.generic_convnet import GenericConvnet
-import tensorflow.compat.v1 as tf
-tf.enable_eager_execution()
+import tensorflow.compat.v2 as tf
 
 
 class ModelDefsTest(tf.test.TestCase):
 
   def testSmallConvs(self):
-    x = tf.random_uniform((32, 32, 32, 3))
+    x = tf.random.uniform((32, 32, 32, 3))
     cifar10_small = model_defs.small_conv + [['O', 10]]
     m = GenericConvnet(model_arch=cifar10_small)
     y = m(x)
@@ -40,7 +39,7 @@ class ModelDefsTest(tf.test.TestCase):
     self.assertAllEqual(y.get_shape().as_list(), [32, 10])
 
   def testVggs(self):
-    x = tf.random_uniform((32, 32, 32, 3))
+    x = tf.random.uniform((32, 32, 32, 3))
     vgg_11 = model_defs.vgg_11 + [['O', 10]]
     m = GenericConvnet(model_arch=vgg_11)
     y = m(x)
@@ -58,11 +57,12 @@ class ModelDefsTest(tf.test.TestCase):
     self.assertAllEqual(y.get_shape().as_list(), [32, 10])
 
   def testAlexNet(self):
-    x = tf.random_uniform((32, 32, 32, 3))
+    x = tf.random.uniform((32, 32, 32, 3))
     alexnet_cifar10 = model_defs.alexnet_cifar10 + [['O', 10]]
     m = GenericConvnet(model_arch=alexnet_cifar10)
     y = m(x)
     self.assertAllEqual(y.get_shape().as_list(), [32, 10])
 
 if __name__ == '__main__':
+  tf.enable_v2_behavior()
   tf.test.main()

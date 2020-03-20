@@ -26,8 +26,8 @@ import os
 import gin
 from tensor2tensor import problems
 from tensor2tensor.data_generators.imagenet import imagenet_preprocess_example
-import tensorflow.compat.v1 as tf
-from tensorflow.compat.v1.estimator import ModeKeys
+import tensorflow.compat.v2 as tf
+from tensorflow.compat.v2.estimator import ModeKeys
 
 _t2t_problem_names = {
     'cifar10': 'image_cifar10',
@@ -68,7 +68,7 @@ def _do_scale(image, size):
                   lambda: tf.cast([shape[0] / shape[1] * size, size], tf.int32),
                   lambda: tf.cast([size, shape[1] / shape[0] * size], tf.int32))
 
-  return tf.image.resize_bicubic([image], shape)[0]
+  return tf.image.resize([image], shape, method='bicubic')[0]
 
 
 def load_and_process_example(example_string, mode,
@@ -84,11 +84,11 @@ def load_and_process_example(example_string, mode,
   Returns:
     {'inputs': image, 'targets':label}
   """
-  data = tf.parse_single_example(
+  data = tf.io.parse_single_example(
       example_string,
       features={
-          'image/encoded': tf.FixedLenFeature([], dtype=tf.string),
-          'image/class/label': tf.FixedLenFeature([], tf.int64)
+          'image/encoded': tf.io.FixedLenFeature([], dtype=tf.string),
+          'image/class/label': tf.io.FixedLenFeature([], tf.int64)
       })
   image_string = data['image/encoded']
   image_decoded = tf.image.decode_jpeg(image_string, channels=3)
@@ -138,7 +138,7 @@ def cub200_loader(mode,
   is_training = mode == tf.estimator.ModeKeys.TRAIN
   is_training_data = dataset_split == tf.estimator.ModeKeys.TRAIN
   shuffle_files = shuffle_files or shuffle_files is None and is_training
-  all_files = tf.gfile.ListDirectory(data_dir)
+  all_files = tf.io.gfile.listdir(data_dir)
   # This assumes that the TFRecords are prefixed with 'train', 'val' and 'test'.
   # We currently support two split: (1) Train: reads both `train` and `val`
   # into one Dataset. (2) Test: only test records are read.

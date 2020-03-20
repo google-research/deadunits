@@ -23,8 +23,7 @@ from __future__ import print_function
 
 from deadunits import unitscorers
 import numpy as np
-import tensorflow.compat.v1 as tf
-tf.enable_eager_execution()
+import tensorflow.compat.v2 as tf
 
 
 class NormScoreTest(tf.test.TestCase):
@@ -65,4 +64,5 @@ class RandomScoreTest(tf.test.TestCase):
                         a.get_shape().as_list()[-1:])
 
 if __name__ == '__main__':
+  tf.enable_v2_behavior()
   tf.test.main()

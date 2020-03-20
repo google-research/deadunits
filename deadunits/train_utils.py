@@ -30,12 +30,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import collections
-
+from absl import logging
 from deadunits import layers
 import gin
 from six.moves import zip
-import tensorflow.compat.v1 as tf
-from tensorflow.compat.v2 import summary
+import tensorflow.compat.v2 as tf
 
 
 def cross_entropy_loss(model,
@@ -83,6 +82,7 @@ def cross_entropy_loss(model,
       loss: avg loss.
       acc: acc.
     """
+    cce = tf.keras.losses.SparseCategoricalCrossentropy()
     logits = model(
         x,
         training=training,
@@ -90,11 +90,14 @@ def cross_entropy_loss(model,
         compute_removal_saliency=compute_removal_saliency,
         is_abs=is_abs,
         aggregate_values=aggregate_values)
-    loss = tf.losses.sparse_softmax_cross_entropy(labels=y, logits=logits)
+    loss = cce(y_true=y, y_pred=logits)
     if calculate_accuracy:
       # Calculate accuracy.
       predictions = tf.cast(tf.argmax(logits, 1), y.dtype)
-      acc = tf.reduce_mean(tf.cast(tf.equal(y, predictions), dtype=tf.float32))
+      acc_obj = tf.keras.metrics.Accuracy()
+      acc_obj.update_state(tf.squeeze(y), predictions)
+      acc = acc_obj.result().numpy()
+      del acc_obj
     else:
       acc = None
     return loss, acc
@@ -235,7 +238,7 @@ def get_optimizer(epoch,
     schedule: list of tuples, each element of the list is (epoch, multiplier).
 
   Returns:
-    tf.train.GradientDescentOptimizer, with scaled learning rate.
+    tf.keras.optimizers.SGD, with scaled learning rate.
   """
   prev_f = 1.0
   for e, f in schedule:
@@ -244,7 +247,7 @@ def get_optimizer(epoch,
     else:
       break
   current_lr = lr * prev_f
-  return tf.train.GradientDescentOptimizer(learning_rate=current_lr)
+  return tf.keras.optimizers.SGD(learning_rate=current_lr)
 
 
 def log_loss_acc(model, subset_val, subset_test):
@@ -261,16 +264,17 @@ def log_loss_acc(model, subset_val, subset_test):
   """
   test_loss, test_acc, n_samples = cross_entropy_loss(
       model, subset_test, calculate_accuracy=True)
-  summary.scalar('test_loss', test_loss)
-  summary.scalar('test_acc', test_acc)
-  tf.logging.info('test_loss:%.4f, test_acc:%.4f, '
-                  'n_samples:%d', test_loss, test_acc, n_samples)
+  tf.summary.scalar('test_loss', test_loss)
+  tf.summary.scalar('test_acc', test_acc)
+  logging.info('test_loss:%.4f, test_acc:%.4f, n_samples:%d', test_loss,
+               test_acc, n_samples)
+
   val_loss, val_acc, n_samples = cross_entropy_loss(
       model, subset_val, calculate_accuracy=True)
-  summary.scalar('val_loss', val_loss)
-  summary.scalar('val_acc', val_acc)
-  tf.logging.info('val_loss:%.4f, val_acc:%.4f, '
-                  'n_samples:%d', val_loss, val_acc, n_samples)
+  tf.summary.scalar('val_loss', val_loss)
+  tf.summary.scalar('val_acc', val_acc)
+  logging.info('val_loss:%.4f, val_acc:%.4f, n_samples:%d', val_loss, val_acc,
+               n_samples)
   return val_loss, val_acc, test_loss, test_acc
 
 
@@ -290,5 +294,5 @@ def log_sparsity(model):
       else:
         b_mask = l.mask_bias
       img = tf.expand_dims(tf.expand_dims(tf.expand_dims(b_mask, 0), 0), -1)
-      summary.image(l_name + '_mask_bias', img)
-      summary.scalar(l_name + '_sparsity', l.get_sparsity())
+      tf.summary.image(l_name + '_mask_bias', img)
+      tf.summary.scalar(l_name + '_sparsity', l.get_sparsity())

@@ -23,8 +23,10 @@ This file implements two layers:
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from absl import logging
 from six.moves import range
-import tensorflow.compat.v1 as tf
+
+import tensorflow.compat.v2 as tf
 
 
 class MaskedLayer(tf.keras.layers.Wrapper):
@@ -67,7 +69,7 @@ class MaskedLayer(tf.keras.layers.Wrapper):
     self.mask_initializer = mask_initializer
 
   def build(self, input_shape):
-    tf.logging.debug('MaskedLayer generated with shape: %s' % input_shape)
+    logging.debug('MaskedLayer generated with shape: %s', input_shape)
     if not self.layer.built:
       self.layer.build(input_shape)
       self.layer.built = True
@@ -133,13 +135,17 @@ class MaskedLayer(tf.keras.layers.Wrapper):
     # Returns the sparsity of the layer counting the 0's in the mask.
     total_param = tf.size(self.layer.weights[0], out_type=tf.int32)
     def get_sparse_weight_count():
-      return total_param - tf.count_nonzero(self.mask_weight, dtype=tf.int32)
+      active_params = tf.math.count_nonzero(self.mask_weight, dtype=tf.int32)
+      return total_param - active_params
+
     pruned_param = 0 if self.mask_weight is None else get_sparse_weight_count()
 
     if not weight_only:
       total_bias = tf.size(self.layer.weights[1], out_type=tf.int32)
       def get_sparse_bias_count():
-        return total_bias - tf.count_nonzero(self.mask_bias, dtype=tf.int32)
+        active_params = tf.math.count_nonzero(self.mask_bias, dtype=tf.int32)
+        return total_bias - active_params
+
       pruned_bias = 0 if self.mask_bias is None else get_sparse_bias_count()
       total_param += total_bias
       pruned_param += pruned_bias
@@ -266,8 +272,8 @@ class TaylorScorer(tf.keras.layers.Layer):
       self.set_or_aggregate('mean', c_mean, n_elements)
       if save_l2norm:
         reshaped_inp = tf.reshape(x, [-1, x.shape[-1]])
-        l2norm = tf.reduce_sum(tf.square(reshaped_inp),
-                               axis=0) / reshaped_inp.shape[0].value
+        l2norm = tf.reduce_sum(
+            tf.square(reshaped_inp), axis=0) / reshaped_inp.shape[0]
         self.set_or_aggregate('l2norm', l2norm, n_elements)
 
       def grad(dy):
@@ -522,15 +528,16 @@ class MeanReplacer(tf.keras.layers.Layer):
     if is_replacing:
       # If active units empty give a warning and return the input.
       if not self._active_units:
-        tf.logging.warning('From %s: is_replacing=True, but there are no active'
-                           'units.' % self)
+        logging.warning(
+            'From %s: is_replacing=True, but there are no active'
+            'units.', self)
         return inputs
       assert inputs.shape[-1] == self.n_units
 
       n_dims = len(inputs.shape)
       c_mean = tf.reduce_mean(inputs, axis=list(range(n_dims - 1)))
       for i in self._active_units:
-        tf.assign(output[Ellipsis, i], tf.broadcast_to(c_mean[i], output.shape[:-1]))
+        output[Ellipsis, i].assign(tf.broadcast_to(c_mean[i], output.shape[:-1]))
     return output.read_value()
 
   def compute_output_shape(self, input_shape):

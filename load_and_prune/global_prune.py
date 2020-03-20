@@ -28,6 +28,8 @@ import os
 import time
 from absl import app
 from absl import flags
+from absl import logging
+
 from deadunits import data
 from deadunits import model_load
 from deadunits import pruner
@@ -35,11 +37,7 @@ from deadunits import train_utils
 from deadunits import utils
 from deadunits.train_utils import cross_entropy_loss
 import gin
-from six.moves import range
-from six.moves import zip
-import tensorflow.compat.v1 as tf
-from tensorflow.compat.v2 import summary
-
+import tensorflow.compat.v2 as tf
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('outdir', '/tmp/dead_units/test',
@@ -89,8 +87,8 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
   """
   if n_finetune <= 0:
     raise ValueError('n_finetune must be positive: given %d' % n_finetune)
-  tf.set_random_seed(seed)
-  optimizer = tf.train.MomentumOptimizer(lr, momentum)
+  tf.random.set_seed(seed)
+  optimizer = tf.keras.optimizers.SGD(lr, momentum=momentum)
   # imagenet_vgg->imagenet
   dataset_basename = dataset_name.split('_')[0]
   model = model_load.get_model(dataset_name=dataset_basename)
@@ -98,8 +96,8 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
   # model.call = tf.function(model.call)
   datasets = data.get_datasets(dataset_name=dataset_name)
   (dataset_train, _, subset_val, subset_test, subset_val2) = datasets
-  tf.logging.info('Model init-config: %s', model.init_config)
-  tf.logging.info('Model forward chain: %s', str(model.forward_chain))
+  logging.info('Model init-config: %s', model.init_config)
+  logging.info('Model forward chain: %s', str(model.forward_chain))
 
   unit_pruner = pruner.UnitPruner(model, subset_val)
   # We prune all conv layers.
@@ -107,13 +105,13 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
   baselines = {l_name: c_flop * flop_regularizer for l_name, c_flop
                in zip(pruning_pool, _vgg16_flop_regularizition)}
 
-  step_counter = tf.train.get_or_create_global_step()
+  step_counter = optimizer.iterations
+  tf.summary.experimental.set_step(step_counter)
   c_pruning_step = tf.Variable(1)
   # Create checkpoint object TODO check whether you need ckpt-prefix.
   checkpoint = tf.train.Checkpoint(
       optimizer=optimizer,
       model=model,
-      step_counter=step_counter,
       c_pruning_step=c_pruning_step)
   # No limits basically by setting to `n_units_target`.
   checkpoint_manager = tf.train.CheckpointManager(
@@ -121,12 +119,11 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
 
   latest_cpkt = checkpoint_manager.latest_checkpoint
   if latest_cpkt:
-    tf.logging.info('Using latest checkpoint at %s', latest_cpkt)
+    logging.info('Using latest checkpoint at %s', latest_cpkt)
     # Restore variables on creation if a checkpoint exists.
     checkpoint.restore(latest_cpkt)
-    tf.logging.info('Resuming with pruning step: %d', c_pruning_step.numpy())
+    logging.info('Resuming with pruning step: %d', c_pruning_step.numpy())
   pruning_step = c_pruning_step.numpy()
-  summary.experimental.set_step(step_counter)
   while pruning_step <= n_units_target:
     for (x, y) in dataset_train:
       # Every `n_finetune` step perform pruning.
@@ -158,33 +155,33 @@ def prune_and_finetune_model(dataset_name='imagenet_vgg',
       optimizer.apply_gradients(
           list(zip(grads, model.variables)), global_step=step_counter)
       if step_counter.numpy() % log_interval == 0:
-        summary.scalar('loss_train', loss_train)
-        summary.image('x', x, max_outputs=1)
+        tf.summary.scalar('loss_train', loss_train)
+        tf.summary.image('x', x, max_outputs=1)
 
 
 def main(_):
-  tf.enable_eager_execution()
+  tf.enable_v2_behavior()
   gin.parse_config_files_and_bindings(FLAGS.gin_config, FLAGS.gin_binding)
-  if tf.gfile.Exists(FLAGS.outdir):
+  if tf.io.gfile.exists(FLAGS.outdir):
     if FLAGS.override_existing_dir:
-      tf.gfile.DeleteRecursively(FLAGS.outdir)
-      tf.gfile.MakeDirs(FLAGS.outdir)
-      tf.logging.info('The folder:%s has been re-generated', FLAGS.outdir)
+      tf.io.gfile.rmtree(FLAGS.outdir)
+      tf.io.gfile.makedirs(FLAGS.outdir)
+      logging.info('The folder:%s has been re-generated', FLAGS.outdir)
     else:
-      tf.logging.warning('The folder:%s exists', FLAGS.outdir)
+      logging.warning('The folder:%s exists', FLAGS.outdir)
   else:
-    tf.gfile.MakeDirs(FLAGS.outdir)
-    tf.logging.info('The folder:%s has been generated', FLAGS.outdir)
+    tf.io.gfile.makedirs(FLAGS.outdir)
+    logging.info('The folder:%s has been generated', FLAGS.outdir)
   tb_path = os.path.join(FLAGS.outdir, 'tb')
-  summary_writer = summary.create_file_writer(tb_path, flush_millis=1000)
+  summary_writer = tf.summary.create_file_writer(tb_path, flush_millis=1000)
   with summary_writer.as_default():
     prune_and_finetune_model()
   logconfigfile_path = os.path.join(FLAGS.outdir, 'config.log')
-  if tf.gfile.Exists(logconfigfile_path):
+  if tf.io.gfile.exists(logconfigfile_path):
     # This should happen when the process is preempted and continued afterwards.
-    tf.logging.warning('The log_file:%s exists', logconfigfile_path)
+    logging.warning('The log_file:%s exists', logconfigfile_path)
   else:
-    with tf.gfile.GFile(logconfigfile_path, 'w') as f:
+    with tf.io.gfile.GFile(logconfigfile_path, 'w') as f:
       f.write('# Gin-Config:\n %s' % gin.config.operative_config_str())
 
 

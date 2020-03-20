@@ -27,8 +27,8 @@ from absl.testing import parameterized
 from deadunits import layers
 from deadunits import model_defs
 from deadunits import model_load
-import tensorflow.compat.v1 as tf
-tf.enable_eager_execution()
+import tensorflow.compat.v2 as tf
+tf.enable_v2_behavior()
 
 
 class GetModelTest(parameterized.TestCase, tf.test.TestCase):
@@ -105,4 +105,5 @@ class GetModelTest(parameterized.TestCase, tf.test.TestCase):
                        is_prepared)
 
 if __name__ == '__main__':
+  tf.enable_v2_behavior()
   tf.test.main()

@@ -21,7 +21,7 @@ from __future__ import print_function
 
 from deadunits import generic_convnet
 from deadunits import layers
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf
 
 
 class GenericConvnetTest(tf.test.TestCase):
@@ -33,16 +33,16 @@ class GenericConvnetTest(tf.test.TestCase):
     # 'flatten_1', 'dense_1', 'dense_1_a', 'output_1'])
     self.assertEqual(len(m.forward_chain), 10)
     self.assertEqual(m.name, 'test')
-    self.assertTrue(isinstance(m.conv_1, tf.keras.layers.Conv2D))
+    self.assertIsInstance(m.conv_1, tf.keras.layers.Conv2D)
     self.assertEqual(m.conv_1_a, tf.keras.activations.relu)
-    self.assertTrue(isinstance(m.maxpool_1, tf.keras.layers.MaxPool2D))
-    self.assertTrue(isinstance(m.conv_2, tf.keras.layers.Conv2D))
+    self.assertIsInstance(m.maxpool_1, tf.keras.layers.MaxPool2D)
+    self.assertIsInstance(m.conv_2, tf.keras.layers.Conv2D)
     self.assertEqual(m.conv_2_a, tf.keras.activations.relu)
-    self.assertTrue(isinstance(m.maxpool_2, tf.keras.layers.MaxPool2D))
-    self.assertTrue(isinstance(m.flatten_1, tf.keras.layers.Flatten))
-    self.assertTrue(isinstance(m.dense_1, tf.keras.layers.Dense))
+    self.assertIsInstance(m.maxpool_2, tf.keras.layers.MaxPool2D)
+    self.assertIsInstance(m.flatten_1, tf.keras.layers.Flatten)
+    self.assertIsInstance(m.dense_1, tf.keras.layers.Dense)
     self.assertEqual(m.dense_1_a, tf.keras.activations.relu)
-    self.assertTrue(isinstance(m.output_1, tf.keras.layers.Dense))
+    self.assertIsInstance(m.output_1, tf.keras.layers.Dense)
 
   def testInvalidModelArchitectures(self):
     with self.assertRaises(AssertionError):
@@ -89,7 +89,7 @@ class GenericConvnetTest(tf.test.TestCase):
         model_arch=[['C', 3, 5, {
             'padding': 'same'
         }]])
-    x = tf.random_uniform((5, 32, 32, 3))
+    x = tf.random.uniform((5, 32, 32, 3))
     y = m(x)
     self.assertAllEqual(x.shape, y.shape)
     generic_convnet.GenericConvnet(model_arch=[['MP', 2, [3, 5]]])
@@ -97,64 +97,64 @@ class GenericConvnetTest(tf.test.TestCase):
 
   def testMaskedLayer(self):
     m = generic_convnet.GenericConvnet(name='test', use_masked_layers=True)
-    self.assertTrue(isinstance(m.conv_1, layers.MaskedLayer))
-    self.assertTrue(isinstance(m.conv_2, layers.MaskedLayer))
-    self.assertTrue(isinstance(m.dense_1, layers.MaskedLayer))
-    self.assertTrue(not isinstance(m.flatten_1, layers.MaskedLayer))
+    self.assertIsInstance(m.conv_1, layers.MaskedLayer)
+    self.assertIsInstance(m.conv_2, layers.MaskedLayer)
+    self.assertIsInstance(m.dense_1, layers.MaskedLayer)
+    self.assertNotIsInstance(m.flatten_1, layers.MaskedLayer)
 
   def testUseTaylorScorer(self):
     model_arch = [['C', 16, [3, 5], {}], ['F'], ['D', 16]]
     m = generic_convnet.GenericConvnet(
         name='test', model_arch=model_arch, use_taylor_scorer=True)
-    m(tf.random_uniform((2, 10, 10, 3)))
+    m(tf.random.uniform((2, 10, 10, 3)))
     correct_chain = [
         'conv_1', 'conv_1_a', 'conv_1_ts', 'flatten_1', 'dense_1', 'dense_1_a',
         'dense_1_ts'
     ]
     self.assertAllEqual(m.forward_chain, correct_chain)
-    self.assertTrue(isinstance(m.conv_1_ts, layers.TaylorScorer))
-    self.assertFalse(isinstance(m.conv_1, layers.TaylorScorer))
-    self.assertTrue(isinstance(m.dense_1_ts, layers.TaylorScorer))
-    self.assertFalse(isinstance(m.dense_1, layers.TaylorScorer))
+    self.assertIsInstance(m.conv_1_ts, layers.TaylorScorer)
+    self.assertNotIsInstance(m.conv_1, layers.TaylorScorer)
+    self.assertIsInstance(m.dense_1_ts, layers.TaylorScorer)
+    self.assertNotIsInstance(m.dense_1, layers.TaylorScorer)
 
   def testUseMeanReplacer(self):
     model_arch = [['C', 16, [3, 5], {}], ['GA'], ['D', 16]]
     m = generic_convnet.GenericConvnet(
         name='test', model_arch=model_arch, use_mean_replacer=True)
-    m(tf.random_uniform((2, 10, 10, 3)))
+    m(tf.random.uniform((2, 10, 10, 3)))
     correct_chain = [
         'conv_1', 'conv_1_a', 'conv_1_mr', 'gap_1', 'dense_1', 'dense_1_a',
         'dense_1_mr'
     ]
     self.assertAllEqual(m.forward_chain, correct_chain)
-    self.assertTrue(isinstance(m.conv_1_mr, layers.MeanReplacer))
-    self.assertFalse(isinstance(m.conv_1, layers.MeanReplacer))
-    self.assertTrue(isinstance(m.dense_1_mr, layers.MeanReplacer))
-    self.assertFalse(isinstance(m.dense_1, layers.MeanReplacer))
+    self.assertIsInstance(m.conv_1_mr, layers.MeanReplacer)
+    self.assertNotIsInstance(m.conv_1, layers.MeanReplacer)
+    self.assertIsInstance(m.dense_1_mr, layers.MeanReplacer)
+    self.assertNotIsInstance(m.dense_1, layers.MeanReplacer)
 
   def testUseDropOut(self):
     model_arch = [['C', 16, [3, 5], {}], ['F'], ['D', 16]]
     m = generic_convnet.GenericConvnet(
         name='test', model_arch=model_arch, use_dropout=True)
-    m(tf.random_uniform((2, 10, 10, 3)))
+    m(tf.random.uniform((2, 10, 10, 3)))
     correct_chain = [
         'conv_1', 'conv_1_a', 'conv_1_dr', 'flatten_1', 'dense_1', 'dense_1_a',
         'dense_1_dr'
     ]
     self.assertAllEqual(m.forward_chain, correct_chain)
-    self.assertTrue(isinstance(m.conv_1_dr, tf.keras.layers.Dropout))
-    self.assertTrue(isinstance(m.dense_1_dr, tf.keras.layers.Dropout))
+    self.assertIsInstance(m.conv_1_dr, tf.keras.layers.Dropout)
+    self.assertIsInstance(m.dense_1_dr, tf.keras.layers.Dropout)
 
   def testDropoutInjection(self):
     model_arch = [['C', 16, [3, 5], {}], ['DO', 0.5], ['F'], ['D', 16]]
     m = generic_convnet.GenericConvnet(
         name='test', model_arch=model_arch, use_dropout=False)
-    m(tf.random_uniform((2, 10, 10, 3)))
+    m(tf.random.uniform((2, 10, 10, 3)))
     correct_chain = [
         'conv_1', 'conv_1_a', 'dropout_1', 'flatten_1', 'dense_1', 'dense_1_a'
     ]
     self.assertAllEqual(m.forward_chain, correct_chain)
-    self.assertTrue(isinstance(m.dropout_1, tf.keras.layers.Dropout))
+    self.assertIsInstance(m.dropout_1, tf.keras.layers.Dropout)
 
   def testGetAllLayerKeys(self):
     m = generic_convnet.GenericConvnet(
@@ -175,7 +175,7 @@ class GenericConvnetTest(tf.test.TestCase):
   def testClone(self):
     m = generic_convnet.GenericConvnet(name='test', use_masked_layers=True)
     # Initilizes the params.
-    m(tf.random_uniform((4, 32, 32, 3)))
+    m(tf.random.uniform((4, 32, 32, 3)))
     m2 = m.clone()
     self.assertAllEqual(m2.conv_2.weights[0].numpy(),
                         m.conv_2.weights[0].numpy())
@@ -202,7 +202,7 @@ class GenericConvnetTest(tf.test.TestCase):
     #    'conv_1', 'conv_1_a', 'conv_1_ts', 'flatten_1', 'dense_1', 'dense_1_a',
     #    'dense_1_ts'
     # ]
-    x = tf.random_uniform((2, 10, 10, 3))
+    x = tf.random.uniform((2, 10, 10, 3))
     y = m(x)
     nodes = set(['conv_1_a', 'dense_1_a'])
     y2, res_dict = m(x, return_nodes=nodes)
@@ -229,7 +229,8 @@ class GenericConvnetTest(tf.test.TestCase):
       mean_values = tf.cast(
           tf.broadcast_to(zeros_with_a_single_one, l_out.shape), tf.float32)
       # Default initialization for bias is all zeros.
-      self.assertEqual(tf.count_nonzero(layer_conv_2.weights[1]).numpy(), 0)
+      self.assertEqual(
+          tf.math.count_nonzero(layer_conv_2.weights[1]).numpy(), 0)
       correct_propagated_tensor = m.conv_2(
           tf.keras.activations.relu(mean_values))
       # Since we have constant tensors `mean_values[:,:,:,i]` for each i, each
@@ -245,5 +246,5 @@ class GenericConvnetTest(tf.test.TestCase):
 
 
 if __name__ == '__main__':
-  tf.enable_eager_execution()
+  tf.enable_v2_behavior()
   tf.test.main()

@@ -24,7 +24,7 @@ from absl.testing import parameterized
 from deadunits import train_utils
 import mock
 from six.moves import range
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf
 
 
 class PruningScheduleTest(parameterized.TestCase, tf.test.TestCase):
@@ -80,7 +80,8 @@ class CrossEntropyLossTest(tf.test.TestCase):
     self.assertEqual(total_samples, n_sample)
     self.assertIsNone(acc)
     logits = self.get_logits(n_sample, n_out)
-    true_loss = tf.losses.sparse_softmax_cross_entropy(labels=y, logits=logits)
+    cce = tf.keras.losses.SparseCategoricalCrossentropy()
+    true_loss = cce(y, logits)
     self.assertAllClose(loss, true_loss)
     model.assert_called_once_with(
         x,
@@ -101,8 +102,9 @@ class CrossEntropyLossTest(tf.test.TestCase):
     self.assertEqual(total_samples, n_sample)
     logits = self.get_logits(n_sample, n_out)
     predictions = tf.cast(tf.argmax(logits, 1), y.dtype)
-    true_acc = tf.reduce_mean(
-        tf.cast(tf.equal(y, predictions), dtype=tf.float32))
+    acc_obj = tf.keras.metrics.Accuracy()
+    acc_obj.update_state(tf.squeeze(y), predictions)
+    true_acc = acc_obj.result().numpy()
     self.assertAllClose(acc, true_acc)
 
   def testSingleBatch(self):
@@ -137,8 +139,8 @@ class CrossEntropyLossTest(tf.test.TestCase):
       c_size = min(n_sample, i + chunk_size) - i
       all_logits.append(self.get_logits(c_size, n_out))
     logits = tf.concat(all_logits, 0)
-    true_loss = tf.losses.sparse_softmax_cross_entropy(
-        labels=y_all, logits=logits)
+    cce = tf.keras.losses.SparseCategoricalCrossentropy()
+    true_loss = cce(y_all, logits)
     self.assertAllClose(loss, true_loss, atol=1e-4)
     self.assertEqual(model.call_count, 5)
     model.get_layer_keys.assert_not_called()
@@ -153,12 +155,12 @@ class GetOptimizerTest(tf.test.TestCase):
 
   def testNoSchedule(self):
     optimizer = train_utils.get_optimizer(0)
-    self.assertEqual(optimizer._learning_rate, 0.01)
+    self.assertEqual(optimizer.learning_rate, 0.01)
     optimizer = train_utils.get_optimizer(55)
-    self.assertEqual(optimizer._learning_rate, 0.01)
+    self.assertEqual(optimizer.learning_rate, 0.01)
 
     optimizer = train_utils.get_optimizer(22, lr=0.1)
-    self.assertEqual(optimizer._learning_rate, 0.1)
+    self.assertEqual(optimizer.learning_rate, 0.1)
 
   def testSchedule(self):
     test_schedules = [[[3, 0.5], [6, 0.25]],
@@ -173,9 +175,9 @@ class GetOptimizerTest(tf.test.TestCase):
           test_results[i] = factor*lr
       for i in range(10):
         optimizer = train_utils.get_optimizer(i, lr=lr, schedule=schedule)
-        self.assertEqual(optimizer._learning_rate, test_results[i])
+        self.assertEqual(optimizer.learning_rate, test_results[i])
 
 
 if __name__ == '__main__':
-  tf.enable_eager_execution()
+  tf.enable_v2_behavior()
   tf.test.main()

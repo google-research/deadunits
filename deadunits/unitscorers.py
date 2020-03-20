@@ -44,9 +44,8 @@ def norm_score(tensor, order=2, **_):
   assert len(tensor.shape) > 1
   if len(tensor.shape) > 2:
     tensor = tf.reshape(tensor, (-1, tensor.shape[-1]))
-  return tf.math.pow(tf.norm(tensor,
-                             axis=0,
-                             ord=order), order) / tensor.shape[0].value
+  return tf.math.pow(tf.norm(tensor, axis=0, ord=order),
+                     order) / tensor.shape[0]
 
 
 def random_score(tensor, **_):

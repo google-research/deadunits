@@ -22,8 +22,7 @@ from __future__ import print_function
 from absl.testing import parameterized
 from deadunits import utils
 import mock
-import tensorflow.compat.v1 as tf
-tf.enable_eager_execution()
+import tensorflow.compat.v2 as tf
 
 
 class Score2BinaryMaskTest(parameterized.TestCase, tf.test.TestCase):
@@ -110,4 +109,5 @@ class BindGinParamsTest(tf.test.TestCase):
       bind_param_mock.assert_any_call(k, v)
 
 if __name__ == '__main__':
+  tf.enable_v2_behavior()
   tf.test.main()
