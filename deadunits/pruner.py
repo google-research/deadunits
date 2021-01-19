@@ -52,7 +52,7 @@ import tensorflow.compat.v2 as tf
 ALL_SCORING_FUNCTIONS = ['norm', 'abs_mrs', 'abs_rs', 'mrs', 'rs', 'rand']
 
 
-@gin.configurable(blacklist=['model', 'subset_val'])
+@gin.configurable(denylist=['model', 'subset_val'])
 class UnitPruner(object):
   """Class for supporting various pruning tasks."""
 
@@ -82,7 +82,7 @@ class UnitPruner(object):
     self.pruning_method = pruning_method
     self.is_bp = is_bp
 
-  @gin.configurable(blacklist=['layer_name', 'pruning_factor', 'pruning_count'])
+  @gin.configurable(denylist=['layer_name', 'pruning_factor', 'pruning_count'])
   def prune_layer(self, layer_name, pruning_factor=0.1, pruning_count=None,
                   pruning_method=None, is_bp=None):
     """Prunes a single layer using the given scoring function.
@@ -162,7 +162,7 @@ class UnitPruner(object):
         self.model, scores, is_bp, layers2prune, pruning_factor, pruning_count,
         mean_values, input_shapes)
 
-  @gin.configurable(blacklist=['pruning_pool', 'baselines'])
+  @gin.configurable(denylist=['pruning_pool', 'baselines'])
   def prune_one_unit(self, pruning_pool, baselines=None, normalized_scores=True,
                      pruning_method=None, is_bp=None):
     """Picks a layer and prunes a single unit using the scoring function.
@@ -268,9 +268,9 @@ class UnitPruner(object):
                             smallest_nprune, mean_values, input_shapes)
 
 
-@gin.configurable('pruning_config', blacklist=['model', 'subset_val',
-                                               'subset_val2', 'subset_test',
-                                               'f_retrain'])
+@gin.configurable(
+    'pruning_config',
+    denylist=['model', 'subset_val', 'subset_val2', 'subset_test', 'f_retrain'])
 def probe_pruning(model,
                   subset_val,
                   subset_val2,

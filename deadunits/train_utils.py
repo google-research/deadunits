@@ -224,7 +224,7 @@ def retrain_model(model, total_iter, dataset_train, optimizer,
         list(zip(grads, model.variables)), global_step=global_step)
 
 
-@gin.configurable('get_optimizer', blacklist=['epoch'])
+@gin.configurable('get_optimizer', denylist=['epoch'])
 def get_optimizer(epoch,
                   lr=0.01,
                   schedule=()):
