@@ -50,17 +50,17 @@ class GetDatasetsTest(tf.test.TestCase):
     self.assertEqual(x.shape, [bs, 32, 32, 3])
     self.assertEqual(y.shape, [bs])
     self.assertLessEqual(tf.reduce_max(x), 1.0)
-    self.assertGreaterEqual(tf.reduce_min(x), 0)
+    self.assertGreaterEqual(tf.reduce_min(x), -1.)
     x, y = next(dataset_test.__iter__())
     self.assertLessEqual(tf.reduce_max(x), 1.0)
-    self.assertGreaterEqual(tf.reduce_min(x), 0)
+    self.assertGreaterEqual(tf.reduce_min(x), -1.)
     self.assertEqual(x.shape, [bs, 32, 32, 3])
     self.assertEqual(y.shape, [bs])
 
     c_iterator = subset_val.__iter__()
     x, y = next(c_iterator)
     self.assertLessEqual(tf.reduce_max(x), 1.0)
-    self.assertGreaterEqual(tf.reduce_min(x), 0)
+    self.assertGreaterEqual(tf.reduce_min(x), -1.0)
     self.assertEqual(x.shape, [val_size, 32, 32, 3])
     self.assertEqual(y.shape, [val_size])
     # Since chunk_size=None, it should only have one batch.
@@ -70,7 +70,7 @@ class GetDatasetsTest(tf.test.TestCase):
     c_iterator = subset_val2.__iter__()
     x2, y2 = next(c_iterator)
     self.assertLessEqual(tf.reduce_max(x2), 1.0)
-    self.assertGreaterEqual(tf.reduce_min(x2), 0)
+    self.assertGreaterEqual(tf.reduce_min(x2), -1.)
     self.assertEqual(x2.shape, [eval_size, 32, 32, 3])
     self.assertEqual(y2.shape, [eval_size])
     # Check that the subset's are disjoint.
@@ -82,7 +82,7 @@ class GetDatasetsTest(tf.test.TestCase):
     c_iterator = subset_test.__iter__()
     x, y = next(c_iterator)
     self.assertLessEqual(tf.reduce_max(x), 1.0)
-    self.assertGreaterEqual(tf.reduce_min(x), 0)
+    self.assertGreaterEqual(tf.reduce_min(x), -1.)
     self.assertEqual(x.shape, [eval_size, 32, 32, 3])
     self.assertEqual(y.shape, [eval_size])
     with self.assertRaises(StopIteration):
