@@ -11,23 +11,11 @@ This library uses [gin-config](https://github.com/google/gin-config),
 [tf.eager](https://www.tensorflow.org/guide/eager). It
 might be useful to familiarize yourself with those libraries.
 
-Code base implements various pruning techniques proposed.
-- `eval_layer.py`: For pruning individual layers without fine-tuning for
-  reproducing experiments in
-  [Pruning Filters for Efficient ConvNets](https://arxiv.org/abs/1608.08710).
-
-- `global_prune.py`: Implements the global pruning strategy from 
-  [Pruning Convolutional Neural Networks for Resource Efficient Inference](https://arxiv.org/abs/1611.06440).
-
-- `prune_all_layers.py`: Pruning a network according to the method given in
-  [ThiNet: A Filter Level Pruning Method for Deep Neural Network Compression](https://arxiv.org/abs/1707.06342).
-
-It worth also mentioning
 ### Getting Started
 - Installing the package:
 ```bash
 pip install -r deadunits/requirements.txt
-python setup.py install
+export PYTHONPATH=$PYTHONPATH:$PWD
 python -m deadunits.pruner_test
 ```
 - Downloading and preparing the data. We use `t2t-datagen`.
@@ -50,6 +38,22 @@ python eval_layer.py --gin_binding=get_datasets.data_dir=\"${HOME}/t2t_data\" \
 ```
   Running this code would prune units of the second convolutional layer in
   increasing sparsities.
+
+### Various Pruning Experiments
+We implement various pruning techniques and strategies under load_and_prune:
+- `eval_layer.py`: For pruning individual layers without fine-tuning for
+  reproducing experiments in
+  [Pruning Filters for Efficient ConvNets](https://arxiv.org/abs/1608.08710).
+
+- `global_prune.py`:   Loads a pretrained network and prunes one unit at a time
+  following the recipe in
+  [Pruning Convolutional Neural Networks for Resource Efficient Inference](https://arxiv.org/abs/1611.06440),
+  except there is no weight decay implemented, since (1) it is not that straight
+  forward to implement. (2) It would be biased towards norm based scoring
+  functions.
+
+- `prune_all_layers.py`: Pruning a network according to the method given in
+  [ThiNet: A Filter Level Pruning Method for Deep Neural Network Compression](https://arxiv.org/abs/1707.06342).
 
 ### Deadunits Library Modules
 - **pruner**: involves UnitPruner class and other pruning utilities.

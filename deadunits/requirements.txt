@@ -3,5 +3,5 @@ gin-config>=0.1.2
 mock
 numpy>=1.15.4
 tensor2tensor
-tensorflow==1.14.0
+tensorflow=1.15.7
 six>=1.10
